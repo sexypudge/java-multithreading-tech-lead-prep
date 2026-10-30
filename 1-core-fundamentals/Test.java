@@ -38,35 +38,35 @@ public class Test {
             System.out.println("[Callable] " + taskName + " completed");
             return result;
         }
-
-        public static void main(String[] args) throws ExecutionException, InterruptedException {
-            Object lock = new Object();
-
-            System.out.println("\n--- WAITING State Demo ---");
-            Thread t3 = new Thread(() -> {
-                synchronized (lock) {
-                    try {
-                        System.out.println("  [T3] Calling wait()...");
-                        lock.wait(); // Vào WAITING state
-                        System.out.println("  [T3] Woke up from wait()");
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }, "Thread-3");
-
-            t3.start();
-            Thread.sleep(500);
-            printThreadState(t3, "T3 after wait() (WAITING)");
-
-            // Wake up T3
-            synchronized (lock) {
-                lock.notify();
-            }
-        }
     }
 
     private static void printThreadState(Thread thread, String action) {
         System.out.println(action + " -> State: " + thread.getState());
+    }
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        Object lock = new Object();
+
+        System.out.println("\n--- WAITING State Demo ---");
+        Thread t3 = new Thread(() -> {
+            synchronized (lock) {
+                try {
+                    System.out.println("  [T3] Calling wait()...");
+                    lock.wait(); // Vào WAITING state
+                    System.out.println("  [T3] Woke up from wait()");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, "Thread-3");
+
+        t3.start();
+        Thread.sleep(500);
+        printThreadState(t3, "T3 after wait() (WAITING)");
+
+        // Wake up T3
+        synchronized (lock) {
+            lock.notify();
+        }
     }
 }
