@@ -1,7 +1,7 @@
 /**
  * SYNCHRONIZATION TRONG JAVA
  * 
- * Synchronization đảm bảo chỉ 1 thread truy cập critical section tại một thời điểm
+ * SynchronizationDemo.md đảm bảo chỉ 1 thread truy cập critical section tại một thời điểm
  * 
  * 3 loại synchronization:
  * 1. Synchronized Method - lock trên instance (this)
@@ -106,32 +106,32 @@ public class SynchronizationDemo {
         final int THREADS = 10;
         final int INCREMENTS = 1000;
 
-        // Test 1: Unsafe Counter (Race Condition)
-        System.out.println("--- Test 1: WITHOUT Synchronization ---");
-        UnsafeCounter unsafeCounter = new UnsafeCounter();
-        testCounter(() -> unsafeCounter.increment(), 
-                    () -> unsafeCounter.getCount(), 
-                    THREADS, INCREMENTS);
+//        // Test 1: Unsafe Counter (Race Condition)
+//        System.out.println("--- Test 1: WITHOUT SynchronizationDemo.md ---");
+//        UnsafeCounter unsafeCounter = new UnsafeCounter();
+//        testCounter(() -> unsafeCounter.increment(),
+//                    () -> unsafeCounter.getCount(),
+//                    THREADS, INCREMENTS);
 
-        // Test 2: Synchronized Method
-        System.out.println("\n--- Test 2: Synchronized Method ---");
-        SafeCounterMethod safeMethod = new SafeCounterMethod();
-        testCounter(() -> safeMethod.increment(), 
-                    () -> safeMethod.getCount(), 
-                    THREADS, INCREMENTS);
-
-        // Test 3: Synchronized Block
-        System.out.println("\n--- Test 3: Synchronized Block ---");
-        SafeCounterBlock safeBlock = new SafeCounterBlock();
-        testCounter(() -> safeBlock.increment(), 
-                    () -> safeBlock.getCount(), 
-                    THREADS, INCREMENTS);
-
-        // Test 4: Static Synchronized
-        System.out.println("\n--- Test 4: Static Synchronized ---");
-        testCounter(() -> StaticCounter.increment(), 
-                    () -> StaticCounter.getCount(), 
-                    THREADS, INCREMENTS);
+//        // Test 2: Synchronized Method
+//        System.out.println("\n--- Test 2: Synchronized Method ---");
+//        SafeCounterMethod safeMethod = new SafeCounterMethod();
+//        testCounter(() -> safeMethod.increment(),
+//                    () -> safeMethod.getCount(),
+//                    THREADS, INCREMENTS);
+//
+//        // Test 3: Synchronized Block
+//        System.out.println("\n--- Test 3: Synchronized Block ---");
+//        SafeCounterBlock safeBlock = new SafeCounterBlock();
+//        testCounter(() -> safeBlock.increment(),
+//                    () -> safeBlock.getCount(),
+//                    THREADS, INCREMENTS);
+//
+//        // Test 4: Static Synchronized
+//        System.out.println("\n--- Test 4: Static Synchronized ---");
+//        testCounter(() -> StaticCounter.increment(),
+//                    () -> StaticCounter.getCount(),
+//                    THREADS, INCREMENTS);
 
         // ============================================
         // DEMO: REENTRANT LOCK
@@ -139,28 +139,28 @@ public class SynchronizationDemo {
         System.out.println("\n--- Reentrant Lock Demo ---");
         ReentrantExample reentrant = new ReentrantExample();
         reentrant.outerMethod();
-
-        // ============================================
-        // INTERVIEW TIPS
-        // ============================================
-        System.out.println("\n=== INTERVIEW TIPS ===");
-        System.out.println("Q: synchronized method vs block?");
-        System.out.println("A: Block tốt hơn - minimize lock scope, better performance");
-        System.out.println("   Method lock toàn bộ, block chỉ lock critical section");
-        
-        System.out.println("\nQ: synchronized có reentrant không?");
-        System.out.println("A: CÓ! Thread đã hold lock có thể acquire lại");
-        
-        System.out.println("\nQ: synchronized trên null object?");
-        System.out.println("A: NullPointerException!");
-        
-        System.out.println("\nQ: Performance impact?");
-        System.out.println("A: Lock contention → context switching → slower");
-        System.out.println("   Minimize lock scope, use concurrent collections");
-        
-        System.out.println("\nQ: Alternatives to synchronized?");
-        System.out.println("A: ReentrantLock, ReadWriteLock, StampedLock");
-        System.out.println("   Atomic variables, Concurrent collections");
+//
+//        // ============================================
+//        // INTERVIEW TIPS
+//        // ============================================
+//        System.out.println("\n=== INTERVIEW TIPS ===");
+//        System.out.println("Q: synchronized method vs block?");
+//        System.out.println("A: Block tốt hơn - minimize lock scope, better performance");
+//        System.out.println("   Method lock toàn bộ, block chỉ lock critical section");
+//
+//        System.out.println("\nQ: synchronized có reentrant không?");
+//        System.out.println("A: CÓ! Thread đã hold lock có thể acquire lại");
+//
+//        System.out.println("\nQ: synchronized trên null object?");
+//        System.out.println("A: NullPointerException!");
+//
+//        System.out.println("\nQ: Performance impact?");
+//        System.out.println("A: Lock contention → context switching → slower");
+//        System.out.println("   Minimize lock scope, use concurrent collections");
+//
+//        System.out.println("\nQ: Alternatives to synchronized?");
+//        System.out.println("A: ReentrantLock, ReadWriteLock, StampedLock");
+//        System.out.println("   Atomic variables, Concurrent collections");
     }
 
     /**

@@ -120,7 +120,7 @@ public class CompletableFutureDemo {
         System.out.println("  Result: " + future1.join());
 
         // handle - handle both success and error
-        CompletableFuture<String> future2 = CompletableFuture.supplyAsync(() -> {
+        CompletableFuture<Object> future2 = CompletableFuture.supplyAsync(() -> {
             throw new RuntimeException("Error!");
         }).handle((result, ex) -> {
             if (ex != null) {
