@@ -41,7 +41,7 @@ public class JavaMemoryModelDemo {
         PlainFlag flag = new PlainFlag();
         Thread t = new Thread(() -> {
             long n = 0;
-            while (!flag.stop) { // JIT có thể hoist việc đọc ra ngoài vòng lặp
+            while (!flag.stop) { // JIT có thể hoist việc đọc ra ngoài vòng lặp: nếu flag is false thì tiếp tục while và tăng n++
                 n++;
             }
             System.out.println("  [Reader] Thấy stop=true sau " + n + " vòng");
@@ -49,13 +49,13 @@ public class JavaMemoryModelDemo {
         t.setDaemon(true); // để JVM vẫn thoát được nếu thread kẹt vô hạn
         t.start();
 
-        Thread.sleep(500);
-        flag.stop = true;
-        t.join(1000);
+        Thread.sleep(500); // đợi để Thread t khởi động nhuưng ko đảm bảo sau 500s sẽ khởi động
+        flag.stop = true; // change the value of flag = true để kết thúc vòng while và Thread thoát đc ra
+        t.join(1000); // Main thread waits up to 1 second for reader to terminate.
         if (t.isAlive()) {
-            System.out.println("  ✗ Reader KHÔNG thấy thay đổi sau 1 giây → lỗi visibility (không có HB)");
+            System.out.println("  ✗ Reader KHÔNG thấy thay đổi sau 1 giây → lỗi visibility (không có HB)"); // sau 1s, Flag đã được ghi true, nhưng reader chưa thoát
         } else {
-            System.out.println("  (Lần này reader thoát - JIT chưa tối ưu. Vẫn là code SAI theo JMM.)");
+            System.out.println("  (Lần này reader thoát - JIT chưa tối ưu. Vẫn là code SAI theo JMM.)"); // Lần này reader thoát nhưng code vẫn sai
         }
     }
 
@@ -67,14 +67,21 @@ public class JavaMemoryModelDemo {
         volatile boolean ready = false; // volatile làm "cầu nối" happens-before
 
         void write() {
+            // Thứ tự phải đúng để
             data = 42;      // (1) ghi thường
             ready = true;   // (2) ghi volatile  → HB → (3)
         }
 
         int read() {
+            // volatile: đảm bảo visibility và ordering thông qua volatile read/write.
+            // while: tạo cơ chế chờ.
+            // Cả hai kết hợp đúng thứ tự mới tạo được cơ chế publish dữ liệu an toàn trong demo này.
+
             while (!ready) {          // (3) đọc volatile
                 Thread.onSpinWait();
             }
+
+            // (4) Normal read
             return data;              // (4) đảm bảo thấy 42 nhờ transitivity: (1) HB (2) HB (3) HB (4)
         }
     }
@@ -86,6 +93,11 @@ public class JavaMemoryModelDemo {
         Thread.sleep(100);
         p.write();
         reader.join();
+        // Thread p ghi data trước, sau đó ghi volatile ready = true.
+        // Thread reader đọc được ready = true thì volatile write happens-before
+        // volatile read. Kết hợp với program order và transitivity,
+        // Thread reader đảm bảo nhìn thấy data = 42.
+
     }
 
     // ============================================

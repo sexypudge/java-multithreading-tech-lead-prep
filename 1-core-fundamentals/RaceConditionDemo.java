@@ -174,18 +174,18 @@ public class RaceConditionDemo {
         // Demo 1: Read-Modify-Write race condition
         System.out.println("--- Demo 1: Read-Modify-Write Race Condition ---");
         UnsafeCounter unsafeCounter = new UnsafeCounter();
-        testCounter(() -> unsafeCounter.increment(), 
-                    () -> unsafeCounter.getCount(), 
+        testCounter(() -> unsafeCounter.increment(),
+                    () -> unsafeCounter.getCount(),
                     THREADS, INCREMENTS, "Unsafe");
 
         SafeCounterSync safeSync = new SafeCounterSync();
-        testCounter(() -> safeSync.increment(), 
-                    () -> safeSync.getCount(), 
+        testCounter(() -> safeSync.increment(),
+                    () -> safeSync.getCount(),
                     THREADS, INCREMENTS, "Synchronized");
 
         SafeCounterAtomic safeAtomic = new SafeCounterAtomic();
-        testCounter(() -> safeAtomic.increment(), 
-                    () -> safeAtomic.getCount(), 
+        testCounter(() -> safeAtomic.increment(),
+                    () -> safeAtomic.getCount(),
                     THREADS, INCREMENTS, "Atomic");
 
         // Demo 2: Check-Then-Act race condition
@@ -195,8 +195,8 @@ public class RaceConditionDemo {
         // Demo 3: Compound operations
         System.out.println("\n--- Demo 3: Compound Operations ---");
         UnsafeTransfer unsafeTransfer = new UnsafeTransfer();
-        testTransfer(() -> unsafeTransfer.transfer(10), 
-                     () -> unsafeTransfer.getBalance(), 
+        testTransfer(() -> unsafeTransfer.transfer(10),
+                     () -> unsafeTransfer.getBalance(),
                      "Unsafe");
 
         SafeTransfer safeTransfer = new SafeTransfer();
