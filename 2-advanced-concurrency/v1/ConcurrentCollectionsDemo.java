@@ -1,5 +1,6 @@
+package v1;
+
 import java.util.concurrent.*;
-import java.util.*;
 
 /**
  * CONCURRENT COLLECTIONS - THREAD-SAFE COLLECTIONS

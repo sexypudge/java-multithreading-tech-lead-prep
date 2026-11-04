@@ -103,8 +103,11 @@ Nó giúp Java đảm bảo visibility và ordering giữa các threads, tránh 
 **Answer:**
 
 ✓ Status flags (boolean)
+
 ✓ One writer, multiple readers
+
 ✓ Simple read/write (không phụ thuộc giá trị cũ)
+
 ✗ Compound operations (count++, check-then-act)
 
 ## 15. THREAD-SAFETY DECISION TREE
@@ -112,9 +115,14 @@ Nó giúp Java đảm bảo visibility và ordering giữa các threads, tránh 
 **Answer:**
 
 Need thread-safety?
+
 ├─ Simple read/write? → volatile"
+
 ├─ Compound operation? → synchronized / Lock
+
 ├─ Numeric counter? → AtomicInteger
+
 └─ Complex state? → synchronized / Lock
+
 
 

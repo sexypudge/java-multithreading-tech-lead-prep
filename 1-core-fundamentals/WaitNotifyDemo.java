@@ -25,7 +25,7 @@ public class WaitNotifyDemo {
      * Classic example: Producer tạo data, Consumer xử lý data
      * Queue có capacity limit
      */
-    static class ProducerConsumer {
+    static class ProducerConsumerAlternative {
         private final Queue<Integer> queue = new LinkedList<>();
         private final int CAPACITY = 5;
 
@@ -45,10 +45,10 @@ public class WaitNotifyDemo {
 
                     System.out.println("  [Producer] Producing: " + value);
                     queue.add(value++);
-                    
+
                     // Notify consumer có data mới
                     notify(); // hoặc notifyAll()
-                    
+
                     Thread.sleep(500);
                 }
             }
@@ -69,15 +69,96 @@ public class WaitNotifyDemo {
 
                     int value = queue.poll();
                     System.out.println("  [Consumer] Consuming: " + value);
-                    
+
                     // Notify producer có space
                     notify();
-                    
+
                     Thread.sleep(1000);
                 }
             }
         }
     }
+
+    /**
+     * 1. Phải hiểu
+     * - wait() và notify() thuộc Object.
+     * - Phải gọi trên cùng monitor object.
+     * - wait() release lock, notify() không release lock.
+     * - notify() chỉ đánh thức thread đang WAITING, không lưu tín hiệu.
+     * - Sau notify(), thread phải chờ lấy lại lock.
+     * - Luôn dùng while, không dùng if để kiểm tra điều kiện trước wait().
+     * 2. Phải giải thích được
+     * - Consumer WAITING khi Queue EMPTY.
+     * - Producer WAITING khi Queue FULL.
+     * - Producer notify sau khi add.
+     * - Consumer notify sau khi poll.
+     * - Cả hai thứ tự chạy trước đều phải hoạt động đúng.
+     * 3. Trạng Thái Thread
+     * - Gọi wait() và đang chờ ->	WAITING
+     * - Được thread khác gọi notify() -> 	Vẫn chưa chạy, chuyển sang BLOCKED nếu phải chờ monitor lock
+     * - Đã lấy lại được lock ->	RUNNABLE
+     * - Gọi sleep() ->	TIMED_WAITING
+     */
+    static class ProducerConsumer {
+        private final Queue<Integer> queue = new LinkedList<>();
+        private final int CAPACITY = 5;
+
+        // Dedicated lock object
+        private final Object lock = new Object();
+
+        public void produce() throws InterruptedException {
+            int value = 0;
+
+            while (true) {
+                synchronized (lock) { // (4) Producer acquire lock
+                    while (queue.size() == CAPACITY) {
+                        lock.wait(); // (5) Producer kiểm tra nếu queue FULL thì sẽ chuyển WAITING và trả lock cho consumer
+                    }
+                    // nếu Queue chưa FULL nên bỏ qua while.
+
+                    queue.add(value++); // (5) Producer thêm item nếu queue chưa FULL
+                    lock.notify();
+                    // nếu producer chạy sau consumer: (6) Producer gọi lock.notify(), Consumer được đánh thức và chuyển sang trạng thái BLOCKED để chờ lấy lại lock
+                    // nếu producer chạy trước: (6) Producer đánh thức nhưng Consumer chưa WAITING nên không có thread nào được đánh thức
+
+                    // (7) Producer thoát synchronized, release lock
+                    // (8) Consumer lấy lại lock, kiểm tra điều kiện while lần nữa và tiếp tục lấy item
+                }
+
+                Thread.sleep(500);
+
+            }
+        }
+
+        public void consume() throws InterruptedException {
+            while (true) {
+                synchronized (lock) { // (1) Consumer acquire lock.
+                    while (queue.isEmpty()) { // (2) Queue đang EMPTY
+                        lock.wait(); // (3) Consumer gọi wait() -> RELEASE LOCK & WAITING
+                    }
+
+                    int value = queue.poll();
+                    System.out.println("Consuming: " + value);
+
+                    lock.notify();
+                }
+
+                Thread.sleep(1000);
+            }
+        }
+    }
+
+    /**
+     * Instance synchronized → monitor của this.
+     *
+     *
+     *
+     * Static synchronized → monitor của Class.
+     *
+     *
+     *
+     * synchronized(lock) → monitor của object lock.
+     */
 
     // ============================================
     // DEMO: NOTIFY VS NOTIFYALL
@@ -114,33 +195,33 @@ public class WaitNotifyDemo {
     public static void main(String[] args) throws InterruptedException {
         System.out.println("=== WAIT/NOTIFY DEMO ===\n");
 
-        // Demo 1: Producer-Consumer
-        System.out.println("--- Demo 1: Producer-Consumer Pattern ---");
-        ProducerConsumer pc = new ProducerConsumer();
-
-        Thread producer = new Thread(() -> {
-            try {
-                pc.produce();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }, "Producer");
-
-        Thread consumer = new Thread(() -> {
-            try {
-                pc.consume();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }, "Consumer");
-
-        producer.start();
-        consumer.start();
-
-        // Let it run for 5 seconds
-        Thread.sleep(5000);
-        producer.interrupt();
-        consumer.interrupt();
+//        // Demo 1: Producer-Consumer
+//        System.out.println("--- Demo 1: Producer-Consumer Pattern ---");
+//        ProducerConsumer pc = new ProducerConsumer();
+//
+//        Thread producer = new Thread(() -> {
+//            try {
+//                pc.produce();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }, "Producer");
+//
+//        Thread consumer = new Thread(() -> {
+//            try {
+//                pc.consume();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }, "Consumer");
+//
+//        producer.start();
+//        consumer.start();
+//
+//        // Let it run for 5 seconds
+//        Thread.sleep(5000);
+//        producer.interrupt();
+//        consumer.interrupt();
 
         // Demo 2: notify() vs notifyAll()
         System.out.println("\n--- Demo 2: notify() vs notifyAll() ---");
@@ -198,9 +279,10 @@ public class WaitNotifyDemo {
         System.out.println("Q: Tại sao wait() phải trong synchronized?");
         System.out.println("A: Tránh race condition giữa check và wait");
         System.out.println("   Thread có thể bị notify ngay trước khi wait → miss notification");
+        // Cả wait() và notify() đều yêu cầu thread phải sở hữu monitor lock tương ứng để tránh race condition
         
         System.out.println("\nQ: Tại sao dùng while thay vì if?");
-        System.out.println("A: Spurious wakeup - thread có thể wake up không có notify");
+        System.out.println("A: Spurious wakeup - thread có thể wake up không có notify (wait with timeout)");
         System.out.println("   Phải re-check condition sau khi wake up");
         
         System.out.println("\nQ: wait() vs sleep()?");

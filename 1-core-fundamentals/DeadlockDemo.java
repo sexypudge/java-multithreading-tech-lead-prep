@@ -156,60 +156,60 @@ public class DeadlockDemo {
     // ============================================
     public static void main(String[] args) throws InterruptedException {
         System.out.println("=== DEADLOCK DEMO ===\n");
-
-        // Demo 1: Create deadlock
-        System.out.println("--- Demo 1: DEADLOCK (will hang) ---");
-        System.out.println("Creating deadlock... (will timeout after 5 seconds)");
-        
-        BankAccount acc1 = new BankAccount("ACC-001", 1000);
-        BankAccount acc2 = new BankAccount("ACC-002", 1000);
-
-        Thread t1 = new Thread(() -> {
-            transferWithDeadlock(acc1, acc2, 100);
-        }, "Thread-1");
-
-        Thread t2 = new Thread(() -> {
-            transferWithDeadlock(acc2, acc1, 200);
-        }, "Thread-2");
-
-        t1.start();
-        t2.start();
-
-        // Wait 5 seconds
-        t1.join(5000);
-        t2.join(5000);
-
-        if (t1.isAlive() || t2.isAlive()) {
-            System.out.println("✗ DEADLOCK DETECTED! Threads are stuck.");
-            System.out.println("  Thread-1 state: " + t1.getState());
-            System.out.println("  Thread-2 state: " + t2.getState());
-            
-            // Interrupt to stop
-            t1.interrupt();
-            t2.interrupt();
-        }
-
-        Thread.sleep(1000);
-
-        // Demo 2: Fix with lock ordering
-        System.out.println("\n--- Demo 2: FIX with Lock Ordering ---");
-        BankAccount acc3 = new BankAccount("ACC-003", 1000);
-        BankAccount acc4 = new BankAccount("ACC-004", 1000);
-
-        Thread t3 = new Thread(() -> {
-            transferWithLockOrdering(acc3, acc4, 100);
-        }, "Thread-3");
-
-        Thread t4 = new Thread(() -> {
-            transferWithLockOrdering(acc4, acc3, 200);
-        }, "Thread-4");
-
-        t3.start();
-        t4.start();
-        t3.join();
-        t4.join();
-
-        System.out.println("✓ No deadlock! Both transfers completed.");
+//
+//        // Demo 1: Create deadlock
+//        System.out.println("--- Demo 1: DEADLOCK (will hang) ---");
+//        System.out.println("Creating deadlock... (will timeout after 5 seconds)");
+//
+//        BankAccount acc1 = new BankAccount("ACC-001", 1000);
+//        BankAccount acc2 = new BankAccount("ACC-002", 1000);
+//
+//        Thread t1 = new Thread(() -> {
+//            transferWithDeadlock(acc1, acc2, 100);
+//        }, "Thread-1");
+//
+//        Thread t2 = new Thread(() -> {
+//            transferWithDeadlock(acc2, acc1, 200);
+//        }, "Thread-2");
+//
+//        t1.start();
+//        t2.start();
+//
+//        // Wait 5 seconds
+//        t1.join(5000);
+//        t2.join(5000);
+//
+//        if (t1.isAlive() || t2.isAlive()) {
+//            System.out.println("✗ DEADLOCK DETECTED! Threads are stuck.");
+//            System.out.println("  Thread-1 state: " + t1.getState());
+//            System.out.println("  Thread-2 state: " + t2.getState());
+//
+//            // Interrupt to stop
+//            t1.interrupt();
+//            t2.interrupt();
+//        }
+//
+//        Thread.sleep(1000);
+//
+//        // Demo 2: Fix with lock ordering
+//        System.out.println("\n--- Demo 2: FIX with Lock Ordering ---");
+//        BankAccount acc3 = new BankAccount("ACC-003", 1000);
+//        BankAccount acc4 = new BankAccount("ACC-004", 1000);
+//
+//        Thread t3 = new Thread(() -> {
+//            transferWithLockOrdering(acc3, acc4, 100);
+//        }, "Thread-3");
+//
+//        Thread t4 = new Thread(() -> {
+//            transferWithLockOrdering(acc4, acc3, 200);
+//        }, "Thread-4");
+//
+//        t3.start();
+//        t4.start();
+//        t3.join();
+//        t4.join();
+//
+//        System.out.println("✓ No deadlock! Both transfers completed.");
 
         // Demo 3: Fix with tryLock
         System.out.println("\n--- Demo 3: FIX with tryLock ---");
