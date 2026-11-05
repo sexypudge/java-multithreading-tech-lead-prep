@@ -18,12 +18,27 @@ Bạn phải tự trả lời được (không nhìn code) các câu sau:
 
 ---
 
-## 🗺️ Lộ trình học (đề xuất 7-10 ngày)
+## 🗺️ Lộ trình học (đề xuất 10-11 ngày)
 
 Thứ tự **không** phải theo số thứ tự file. Học theo mạch: *tạo thread → thấy vấn đề → học cách giải quyết → học vấn đề nâng cao*.
 
 | Ngày | File | Trọng tâm |
 |------|------|-----------|
+| 1 | `ThreadCreationExamples.java` | 3 cách tạo thread, `start()` vs `run()` |
+| 2 | `ThreadLifecycleDemo.java` + `ThreadBasicsDemo.java` | 6 state thật sự, `join/sleep/yield`, daemon, uncaught exception |
+| 3 | `RaceConditionDemo.java` | **Thấy lỗi trước**: read-modify-write, check-then-act |
+| 4 | `SynchronizationDemo.java` | Giải pháp: method / block / static, reentrant |
+| 5 | `VolatileDemo.java` + `JavaMemoryModelDemo.java` | Visibility, ordering, **happens-before**, DCL, safe publication |
+| 6 | `WaitNotifyDemo.java` | Giao tiếp giữa thread, Producer-Consumer |
+| 7 | `ThreadInterruptionDemo.java` | Dừng thread an toàn, xử lý `InterruptedException` |
+| 8 | `ExplicitLockDemo.java` | `ReentrantLock`, `Condition`, `ReadWriteLock`, `StampedLock` |
+| 9 | `DeadlockDemo.java` + `LivelockStarvationDemo.java` | Deadlock, livelock, starvation, cách detect và fix |
+| 10 | `ThreadLocalDemo.java` + `ImmutabilityDemo.java` | Thread confinement, immutable, rò rỉ ThreadLocal trong pool |
+| 11 | Ôn tập + bài tập cuối module | Xem phần bên dưới |
+
+> Có thể rút gọn còn 7 ngày nếu bạn đã quen Java: bỏ qua ngày 1-2 và gộp ngày 9-10.
+
+------|------|-----------|
 | 1 | `ThreadCreationExamples.java` | 3 cách tạo thread, `start()` vs `run()` |
 | 2 | `ThreadLifecycleDemo.java` | 6 trạng thái thật sự của `Thread.State` |
 | 3 | `RaceConditionDemo.java` | **Thấy lỗi trước**: read-modify-write, check-then-act |
@@ -71,6 +86,37 @@ Thứ tự **không** phải theo số thứ tự file. Học theo mạch: *tạ
 
 ---
 
+### 8. `ThreadInterruptionDemo.java` 🆕
+- `interrupt()` chỉ set cờ; cờ bị clear khi `InterruptedException` được ném
+- Nuốt interrupt (sai) vs khôi phục cờ (đúng); `synchronized` không interruptible, `lockInterruptibly()` thì có
+- **Interview:** "Dừng thread đúng cách?", "`shutdown()` vs `shutdownNow()`?"
+
+### 9. `ThreadBasicsDemo.java` 🆕
+- `join()` (WAITING) vs `join(timeout)` (TIMED_WAITING), daemon thread, `UncaughtExceptionHandler`, `yield()`
+- **Interview:** "Daemon thread là gì?", "Exception trong thread con xử lý thế nào?"
+
+### 10. `JavaMemoryModelDemo.java` 🆕
+- Các quy tắc happens-before, safe publication, reordering (litmus test), DCL / Holder / Enum singleton, `final` field
+- **Interview:** "Happens-before là gì?", "Vì sao DCL cần volatile?"
+
+### 11. `ExplicitLockDemo.java` 🆕
+- `ReentrantLock` + `tryLock`, `Condition` (bounded buffer), `ReadWriteLock`, `StampedLock` optimistic read
+- **Interview:** "Khi nào dùng `ReentrantLock` thay `synchronized`?"
+
+### 12. `ThreadLocalDemo.java` 🆕
+- Per-thread state, `SimpleDateFormat`, rò rỉ dữ liệu trong thread pool, `InheritableThreadLocal`
+- **Interview:** "`ThreadLocal` gây memory leak thế nào?"
+
+### 13. `LivelockStarvationDemo.java` 🆕
+- Livelock (2 thread nhường nhau mãi) + fix bằng random backoff; starvation với fair vs unfair lock
+- **Interview:** "Deadlock vs livelock vs starvation?"
+
+### 14. `ImmutabilityDemo.java` 🆕
+- Immutable class, `record`, defensive copy, `unmodifiableList` vs `List.copyOf`, snapshot + `volatile`
+- **Interview:** "`final` có làm object immutable không?"
+
+---
+
 ## 🧠 Phương pháp học cho mỗi file (5 bước)
 
 1. **Đọc comment đầu file** và tự trả lời câu interview trước khi đọc code.
@@ -95,6 +141,9 @@ Thứ tự **không** phải theo số thứ tự file. Học theo mạch: *tạ
 | `DeadlockDemo` (Demo 3) | `tryLock` có thể khiến cả 2 thread cùng timeout (không phải deadlock nhưng cũng không thành công). Dòng "✓ No deadlock" in ra cả khi transfer thất bại. Hãy tự kiểm tra return value. |
 | `RaceConditionDemo` | Singleton/transfer unsafe có thể **vẫn ra kết quả đúng** ở nhiều lần chạy. Tăng số thread hoặc chạy lặp để thấy lỗi. |
 | `WaitNotifyDemo` | Chương trình kết thúc bằng `System.exit(0)` vì demo `notify()` để 1 thread chờ mãi. Có chủ đích. |
+| `JavaMemoryModelDemo` | Demo 1 và Demo 4 phụ thuộc JIT/CPU: có thể **không thấy lỗi** (đặc biệt máy ít core). Không thấy lỗi không có nghĩa là code đúng. Demo 4 mất vài giây. |
+| `LivelockStarvationDemo` | Demo fair/unfair lock cho kết quả khác nhau tuỳ máy; trên máy ít core có thể chênh lệch ≈ 1.0x. |
+| `ThreadLocalDemo` | Số lỗi của `SimpleDateFormat` dùng chung thay đổi mỗi lần chạy (có thể là 0 nhưng vẫn sai). |
 
 ---
 
@@ -159,15 +208,20 @@ Làm **không nhìn** code mẫu:
 - [ ] Nêu 4 điều kiện deadlock và ít nhất 3 cách phòng tránh
 - [ ] Đọc được thread dump và tìm ra deadlock
 - [ ] Phân biệt deadlock, livelock, starvation
+- [ ] Nêu và áp dụng được ≥ 4 quy tắc happens-before; giải thích vì sao DCL cần `volatile`
+- [ ] Dừng thread đúng cách bằng interrupt; biết vì sao không được nuốt `InterruptedException`
+- [ ] So sánh được `synchronized` / `ReentrantLock` / `ReadWriteLock` / `StampedLock`
+- [ ] Giải thích được rò rỉ `ThreadLocal` trong thread pool và cách khắc phục
+- [ ] Nêu 5 quy tắc tạo immutable class và phân biệt view với copy của collection
 
 ---
 
-## 🔜 Sẽ bổ sung trong module này
+## 🔜 Tiếp theo
 
-Các chủ đề thường bị hỏi ở mức Senior/Tech Lead mà chưa có file riêng:
+Hoàn thành module này rồi chuyển sang `2-advanced-concurrency/`. Các chủ đề còn thiếu ở những module sau:
+`BlockingQueue`, `ThreadPoolExecutor` chuyên sâu, Virtual Threads, `ConcurrentHashMap` internals, `Phaser`/`Exchanger`, `LongAdder`/CAS/ABA.
 
-| File dự kiến | Nội dung |
-|--------------|----------|
+--------------|----------|
 | `ThreadInterruptionDemo.java` | `interrupt()`, `isInterrupted()`, xử lý `InterruptedException`, dừng thread an toàn |
 | `ThreadBasicsDemo.java` | `join()`, `sleep()`, `yield()`, daemon thread |
 | `JavaMemoryModelDemo.java` | Happens-before, reordering, safe publication, DCL giải thích sâu |
@@ -193,4 +247,6 @@ jps                    # tìm pid
 jstack <pid>           # xem state và deadlock
 ```
 
+> Nếu console hiển thị lỗi font tiếng Việt/ký hiệu, chạy với `java -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 TenClass`.
+>
 > Yêu cầu: JDK 17+ (khuyến nghị JDK 21 để chuẩn bị cho phần Virtual Threads ở module sau).
