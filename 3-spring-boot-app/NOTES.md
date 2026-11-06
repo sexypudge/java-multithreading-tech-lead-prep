@@ -1,7 +1,7 @@
 # Spring `@Async`: cấu hình pool, mất context, xử lý exception
 
-> File này là **tài liệu + code mẫu**, không chạy độc lập (cần Spring). Dán vào một project Spring Boot nhỏ để thử.
-> Nối tiếp `CompletableFutureDemo` (Demo 7 mất context, Demo 5 exception): `@Async` gặp **đúng các bẫy đó**, chỉ khác là Spring giấu chúng sau annotation.
+> Lý thuyết + checklist. Code chạy được tương ứng nằm ngay trong module này: `AsyncConfig` (pool, `MdcTaskDecorator`, `AsyncUncaughtExceptionHandler`), `AsyncService`, `AsyncBehaviorTest`.
+> Nối tiếp `2-advanced-concurrency/CompletableFutureDemo` (Demo 7 mất context, Demo 5 exception): `@Async` gặp **đúng các bẫy đó**, chỉ khác là Spring giấu chúng sau annotation.
 
 ## 1. `@Async` thực chất là gì?
 
@@ -53,20 +53,20 @@ public class AsyncConfig {
 }
 ```
 
-Đây chính là `ThreadPoolExecutor` bạn đã học ở `ExecutorServiceDemo`: **core → queue → max → reject**. Cùng quy tắc, cùng bẫy.
+Đây chính là `ThreadPoolExecutor` bạn đã học ở `2-advanced-concurrency/ExecutorServiceDemo`: **core → queue → max → reject**. Cùng quy tắc, cùng bẫy.
 
-**Pool mặc định là gì?** Tuỳ cấu hình (hãy kiểm tra đúng phiên bản Spring/Boot của anh):
+**Pool mặc định là gì?** Tuỳ cấu hình (kiểm tra đúng phiên bản Spring/Boot của dự án):
 
 - Spring thuần, không khai báo gì: `SimpleAsyncTaskExecutor` → **tạo thread mới cho mỗi task, không giới hạn, không tái sử dụng**.
 - Spring Boot: tự tạo bean `applicationTaskExecutor` (`ThreadPoolTaskExecutor`), chỉnh qua `spring.task.execution.pool.*`.
-  **Queue mặc định không giới hạn** → `max-size` gần như không bao giờ được dùng (đúng bẫy "queue vô hạn" ở `ExecutorServiceDemo`).
-- Boot 3.2+ với `spring.threads.virtual.enabled=true`: dùng virtual thread (xem `VirtualThreadsDemo`).
+  **Queue mặc định không giới hạn** → `max-size` gần như không bao giờ được dùng (đúng bẫy "queue vô hạn" ở `2-advanced-concurrency/ExecutorServiceDemo`).
+- Boot 3.2+ với `spring.threads.virtual.enabled=true`: dùng virtual thread (xem `2-advanced-concurrency/VirtualThreadsDemo`).
 
 → Luôn tự khai báo executor có tên, queue có giới hạn, rejection policy rõ ràng, và tách pool theo loại việc (bulkhead).
 
 ## 3. Mất MDC / SecurityContext / transaction
 
-Cả ba đều dựa trên **ThreadLocal**, nên **không tự đi theo** sang thread của pool (giống `CompletableFutureDemo` Demo 7).
+Cả ba đều dựa trên **ThreadLocal**, nên **không tự đi theo** sang thread của pool (giống `2-advanced-concurrency/CompletableFutureDemo` Demo 7).
 
 | Thứ cần giữ | Hậu quả khi mất | Cách xử lý |
 |---|---|---|

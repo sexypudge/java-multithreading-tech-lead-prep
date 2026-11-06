@@ -1,5 +1,3 @@
-package v2;
-
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -131,7 +129,13 @@ public class CompletableFutureDemo {
         List<Integer> results = cfs.stream().map(CompletableFuture::join).collect(Collectors.toList());
 
         System.out.printf("  5 task × 400ms chạy song song → %s trong %d ms%n", results, (System.nanoTime() - t0) / 1_000_000);
-        System.out.println("  (anyOf: lấy kết quả của task xong ĐẦU TIÊN, hữu ích cho hedged request)");
+
+        // anyOf: hoàn thành khi task ĐẦU TIÊN xong (thành công HOẶC lỗi) - kiểu trả về là Object
+        CompletableFuture<Object> fastest = CompletableFuture.anyOf(
+                CompletableFuture.supplyAsync(() -> { sleep(300); return "mirror-EU"; }, pool),
+                CompletableFuture.supplyAsync(() -> { sleep(100); return "mirror-US"; }, pool));
+        System.out.println("  anyOf → " + fastest.join() + "  (hedged request: gửi nhiều nơi, lấy kết quả về trước)");
+        System.out.println("  ⚠ allOf: 1 CF lỗi → allOf lỗi, nhưng các CF khác VẪN chạy tiếp (không tự cancel).");
         pool.shutdown();
     }
 

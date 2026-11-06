@@ -1,156 +1,138 @@
 import java.util.concurrent.*;
 
 /**
- * BA CÁCH TẠO THREAD TRONG JAVA
- * 
- * Interview Question: "Sự khác biệt giữa 3 cách này?"
+ * CÁC CÁCH TẠO THREAD / TASK TRONG JAVA
+ *
+ * Interview Question: "Sự khác biệt giữa Thread, Runnable, Callable?"
  * Answer:
- * 1. Thread class: Đơn giản nhưng không thể extend class khác (Java single inheritance)
- * 2. Runnable: Best practice, flexible, có thể implement nhiều interfaces
- * 3. Callable: Giống Runnable nhưng có return value và throw exception
+ * 1. extends Thread : trộn "việc cần làm" với "cơ chế chạy"; không extend class khác được (single inheritance)
+ * 2. Runnable       : chỉ mô tả TASK (void run()), tách khỏi thread → tái sử dụng, đưa vào executor được
+ * 3. Callable<V>    : như Runnable nhưng TRẢ KẾT QUẢ và được ném checked exception (V call() throws Exception)
+ *
+ * Ý quan trọng ở level Senior/Tech Lead:
+ *   Trong code production gần như KHÔNG tự new Thread(). Ta định nghĩa task (Runnable/Callable)
+ *   rồi giao cho ExecutorService (giới hạn tài nguyên, đặt tên thread, shutdown có kiểm soát).
+ *   Java 21+: với việc I/O-bound có thể dùng virtual thread (xem 2-advanced-concurrency/VirtualThreadsDemo).
  */
 public class ThreadCreationExamples {
 
     // ============================================
     // CÁCH 1: EXTEND THREAD CLASS
     // ============================================
-    /**
-     * Ưu điểm: Đơn giản, dễ hiểu
-     * Nhược điểm: Không thể extend class khác, tight coupling
-     * Use case: Demo, prototype, simple tasks
-     */
+    /** Nhược điểm: task gắn chặt với Thread, không đưa vào executor một cách tự nhiên được. */
     static class MyThread extends Thread {
-        private String taskName;
+        private final String taskName;
 
-        public MyThread(String taskName) {
+        MyThread(String taskName) {
+            super("MyThread-" + taskName);
             this.taskName = taskName;
         }
 
         @Override
         public void run() {
-            System.out.println("[Thread Class] " + taskName + " started by " + Thread.currentThread().getName());
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            System.out.println("[Thread Class] " + taskName + " completed");
+            System.out.println("  [extends Thread] " + taskName + " chạy trên " + Thread.currentThread().getName());
         }
     }
 
     // ============================================
-    // CÁCH 2: IMPLEMENT RUNNABLE (BEST PRACTICE)
+    // CÁCH 2: IMPLEMENT RUNNABLE (task không trả kết quả)
     // ============================================
-    /**
-     * Ưu điểm: Flexible, có thể extend class khác, reusable
-     * Nhược điểm: Verbose hơn một chút
-     * Use case: Production code, best practice
-     */
     static class MyRunnable implements Runnable {
-        private String taskName;
+        private final String taskName;
 
-        public MyRunnable(String taskName) {
+        MyRunnable(String taskName) {
             this.taskName = taskName;
         }
 
         @Override
         public void run() {
-            System.out.println("[Runnable] " + taskName + " started by " + Thread.currentThread().getName());
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            System.out.println("[Runnable] " + taskName + " completed");
+            System.out.println("  [Runnable] " + taskName + " chạy trên " + Thread.currentThread().getName());
         }
     }
 
     // ============================================
-    // CÁCH 3: IMPLEMENT CALLABLE (WITH RETURN VALUE)
+    // CÁCH 3: IMPLEMENT CALLABLE (task có kết quả)
     // ============================================
-    /**
-     * Ưu điểm: Có return value, có thể throw checked exception
-     * Nhược điểm: Phải dùng ExecutorService, không thể dùng trực tiếp với Thread
-     * Use case: Khi cần kết quả từ thread, async computation
-     */
     static class MyCallable implements Callable<String> {
-        private String taskName;
-        private int computeTime;
+        private final String taskName;
+        private final int computeMs;
 
-        public MyCallable(String taskName, int computeTime) {
+        MyCallable(String taskName, int computeMs) {
             this.taskName = taskName;
-            this.computeTime = computeTime;
+            this.computeMs = computeMs;
         }
 
         @Override
-        public String call() throws Exception {
-            System.out.println("[Callable] " + taskName + " started by " + Thread.currentThread().getName());
-            Thread.sleep(computeTime);
-            String result = taskName + " result after " + computeTime + "ms";
-            System.out.println("[Callable] " + taskName + " completed");
-            return result;
+        public String call() throws Exception {      // được phép ném checked exception
+            Thread.sleep(computeMs);
+            return taskName + " xong sau " + computeMs + "ms trên " + Thread.currentThread().getName();
         }
     }
 
-    // ============================================
-    // DEMO VÀ SO SÁNH
-    // ============================================
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
-        System.out.println("=== JAVA THREAD CREATION - 3 WAYS ===\n");
+    public static void main(String[] args) throws Exception {
+        System.out.println("=== JAVA THREAD CREATION ===\n");
 
-        // CÁCH 1: Thread class
-        System.out.println("--- Cách 1: Extend Thread ---");
-        MyThread thread1 = new MyThread("Task-1");
-        thread1.start(); // Gọi start(), KHÔNG gọi run() trực tiếp!
-        
-        // CÁCH 2: Runnable (Best Practice)
-        System.out.println("\n--- Cách 2: Implement Runnable ---");
-        Thread thread2 = new Thread(new MyRunnable("Task-2"));
-        thread2.start();
+        System.out.println("--- Cách 1: extends Thread ---");
+        MyThread t1 = new MyThread("Task-1");
+        t1.start();
+        t1.join();
 
-        // Runnable với Lambda (Java 8+) - Modern way
-        System.out.println("\n--- Cách 2b: Runnable với Lambda ---");
-        Thread thread3 = new Thread(() -> {
-            System.out.println("[Lambda] Task-3 started by " + Thread.currentThread().getName());
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            System.out.println("[Lambda] Task-3 completed");
-        });
-        thread3.start();
+        System.out.println("\n--- Cách 2: Runnable (class và lambda) ---");
+        Thread t2 = new Thread(new MyRunnable("Task-2"), "Worker-2");
+        Thread t3 = new Thread(() -> System.out.println("  [Lambda] Task-3 chạy trên " + Thread.currentThread().getName()),
+                "Worker-3");
+        t2.start();
+        t3.start();
+        t2.join();
+        t3.join();
 
-        // CÁCH 3: Callable với ExecutorService
-        System.out.println("\n--- Cách 3: Implement Callable ---");
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        
-        // Submit callable tasks
-        Future<String> future1 = executor.submit(new MyCallable("Task-4", 1500));
-        Future<String> future2 = executor.submit(new MyCallable("Task-5", 2000));
+        System.out.println("\n--- Cách 3: Callable + ExecutorService ---");
+        // ExecutorService là AutoCloseable từ Java 19: close() = shutdown() + chờ task xong
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<String> f1 = executor.submit(new MyCallable("Task-4", 300));
+            Future<String> f2 = executor.submit(new MyCallable("Task-5", 500));
+            System.out.println("  main không bị chặn khi submit; get() mới chặn:");
+            System.out.println("  " + f1.get(2, TimeUnit.SECONDS));   // production: luôn get có timeout
+            System.out.println("  " + f2.get(2, TimeUnit.SECONDS));
+        }
 
-        // Get results (blocking call)
-        System.out.println("Waiting for results...");
-        String result1 = future1.get(); // Block until done
-        String result2 = future2.get();
-        
-        System.out.println("\nResults:");
-        System.out.println("  " + result1);
-        System.out.println("  " + result2);
+        // ============================================
+        // BẪY 1: gọi run() thay vì start()
+        // ============================================
+        System.out.println("\n--- Bẫy 1: run() KHÔNG tạo thread mới ---");
+        Thread t4 = new Thread(() -> System.out.println("  run() thực thi trên: " + Thread.currentThread().getName()),
+                "Should-Be-New-Thread");
+        t4.run();                                       // chạy trên chính thread 'main'
+        t4.start();                                     // chạy trên 'Should-Be-New-Thread'
+        t4.join();
 
-        executor.shutdown();
+        // ============================================
+        // BẪY 2: start() hai lần
+        // ============================================
+        System.out.println("\n--- Bẫy 2: start() hai lần ---");
+        try {
+            t4.start();                                 // t4 đã TERMINATED
+        } catch (IllegalThreadStateException e) {
+            System.out.println("  ✓ IllegalThreadStateException: một Thread object chỉ start() được một lần");
+        }
 
         // ============================================
         // INTERVIEW TIPS
         // ============================================
         System.out.println("\n=== INTERVIEW TIPS ===");
-        System.out.println("Q: Cách nào tốt nhất?");
-        System.out.println("A: Runnable (cách 2) - flexible, best practice");
-        System.out.println("   Callable (cách 3) - khi cần return value");
-        System.out.println("\nQ: Tại sao gọi start() chứ không phải run()?");
-        System.out.println("A: start() tạo thread mới và gọi run() trong thread đó");
-        System.out.println("   run() chỉ gọi method bình thường trong current thread");
-        System.out.println("\nQ: Có thể start() một thread nhiều lần?");
-        System.out.println("A: KHÔNG! Sẽ throw IllegalThreadStateException");
+        System.out.println("Q: Nên dùng cách nào?");
+        System.out.println("A: Định nghĩa task bằng Runnable/Callable và giao cho ExecutorService.");
+        System.out.println("   'Thread hay Runnable' thực chất là câu hỏi về tách TASK khỏi CƠ CHẾ CHẠY.");
+
+        System.out.println("\nQ: start() vs run()?");
+        System.out.println("A: start() yêu cầu JVM tạo thread mới rồi gọi run() trên thread đó.");
+        System.out.println("   Gọi run() trực tiếp chỉ là gọi method bình thường trên thread hiện tại.");
+
+        System.out.println("\nQ: Runnable vs Callable?");
+        System.out.println("A: Callable trả về kết quả (qua Future) và được ném checked exception; Runnable thì không.");
+
+        System.out.println("\nQ: Vì sao production không nên new Thread() tuỳ tiện?");
+        System.out.println("A: Mỗi platform thread tốn ~1MB stack + syscall; không giới hạn được số lượng; khó đặt tên,");
+        System.out.println("   khó shutdown, exception dễ bị mất. Executor giải quyết các vấn đề đó.");
     }
 }

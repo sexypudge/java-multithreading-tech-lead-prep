@@ -1,8 +1,7 @@
-package v2;
-
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -138,6 +137,35 @@ public class SynchronizersDemo {
         System.out.println("  → Không 'reentrant' và không có chủ sở hữu → dễ quên release gây rò permit; dùng try/finally.");
     }
 
+    // ============================================
+    // DEMO 4: Phaser (P2 - biết để so sánh)
+    // ============================================
+    static void demo4Phaser() throws InterruptedException {
+        // Phaser = CyclicBarrier "linh hoạt": số bên tham gia THAY ĐỔI được (register / arriveAndDeregister)
+        Phaser phaser = new Phaser(1);                          // main đăng ký để điều khiển các pha
+        Thread[] ts = new Thread[3];
+        for (int i = 0; i < ts.length; i++) {
+            final int id = i + 1;
+            phaser.register();                                  // thêm 1 bên tham gia lúc runtime
+            ts[i] = new Thread(() -> {
+                System.out.println("  [W" + id + "] pha " + phaser.getPhase() + ": tải dữ liệu");
+                phaser.arriveAndAwaitAdvance();                 // chờ mọi bên xong pha 0
+                if (id == 3) {
+                    System.out.println("  [W3] không cần pha sau → rời nhóm");
+                    phaser.arriveAndDeregister();               // số bên giảm, barrier không chờ W3 nữa
+                    return;
+                }
+                System.out.println("  [W" + id + "] pha " + phaser.getPhase() + ": xử lý");
+                phaser.arriveAndDeregister();
+            }, "W" + id);
+            ts[i].start();
+        }
+        phaser.arriveAndAwaitAdvance();                         // main cũng tham gia pha 0
+        phaser.arriveAndDeregister();
+        for (Thread t : ts) t.join();
+        System.out.println("  Ít gặp trong code nghiệp vụ; biết để trả lời 'Phaser khác CyclicBarrier thế nào'.");
+    }
+
     public static void main(String[] args) throws Exception {
         System.out.println("=== SYNCHRONIZERS DEMO ===\n");
 
@@ -149,6 +177,9 @@ public class SynchronizersDemo {
 
         System.out.println("\n--- Demo 3: Semaphore ---");
         demo3Semaphore();
+
+        System.out.println("\n--- Demo 4: Phaser ---");
+        demo4Phaser();
 
         System.out.println("\n=== INTERVIEW TIPS ===");
         System.out.println("Q: CountDownLatch khác CyclicBarrier?");
@@ -168,5 +199,9 @@ public class SynchronizersDemo {
         System.out.println("\nQ: Ví dụ thực tế?");
         System.out.println("A: Latch: chờ N service khởi động xong / gọi N API song song rồi tổng hợp. Barrier: tính toán theo pha.");
         System.out.println("   Semaphore: giới hạn 10 request đồng thời tới dịch vụ bên thứ ba.");
+
+        System.out.println("\nQ: Phaser khác CyclicBarrier?");
+        System.out.println("A: Phaser cho phép số bên tham gia thay đổi lúc runtime và nhiều pha có đánh số;");
+        System.out.println("   CyclicBarrier cố định số bên ngay từ constructor.");
     }
 }

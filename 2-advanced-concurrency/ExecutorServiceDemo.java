@@ -1,5 +1,4 @@
-package v2;
-
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -219,6 +218,67 @@ public class ExecutorServiceDemo {
         }
     }
 
+    // ============================================
+    // DEMO 7: invokeAll / invokeAny
+    // ============================================
+    static void demo7InvokeAllAny() throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(3, namedFactory("invoke"));
+        List<Callable<String>> calls = List.of(
+                () -> { sleep(300); return "replica-A"; },
+                () -> { sleep(100); return "replica-B"; },
+                () -> { sleep(200); return "replica-C"; });
+
+        // invokeAll: chờ TẤT CẢ xong (hoặc hết timeout → task chưa xong bị cancel), giữ đúng thứ tự danh sách
+        List<Future<String>> all = pool.invokeAll(calls, 1, TimeUnit.SECONDS);
+        StringBuilder sb = new StringBuilder();
+        for (Future<String> f : all) sb.append(f.get()).append(' ');
+        System.out.println("  invokeAll → " + sb.toString().trim() + "  (thứ tự theo danh sách, không theo thời gian xong)");
+
+        // invokeAny: trả kết quả của task THÀNH CÔNG ĐẦU TIÊN, cancel các task còn lại (hedged request)
+        System.out.println("  invokeAny → " + pool.invokeAny(calls) + "  (nhanh nhất thắng, phần còn lại bị cancel)");
+        shutdownAndWait(pool);
+    }
+
+    // ============================================
+    // DEMO 8: ScheduledExecutorService - fixedRate vs fixedDelay
+    // ============================================
+    static void demo8Scheduled() throws InterruptedException {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2, namedFactory("sched"));
+        long t0 = System.nanoTime();
+        List<Long> rateStarts = new CopyOnWriteArrayList<>();
+        List<Long> delayStarts = new CopyOnWriteArrayList<>();
+
+        // Task mất 300ms, chu kỳ 200ms
+        // fixedRate : lịch tính từ lúc BẮT ĐẦU → task chậm hơn chu kỳ thì lần sau chạy NGAY khi lần trước xong
+        //             (KHÔNG chạy chồng lên nhau - cùng 1 task không bao giờ chạy song song với chính nó)
+        // fixedDelay: chờ 200ms SAU KHI lần trước KẾT THÚC
+        ScheduledFuture<?> rate = scheduler.scheduleAtFixedRate(() -> {
+            rateStarts.add((System.nanoTime() - t0) / 1_000_000);
+            sleep(300);
+        }, 0, 200, TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> delay = scheduler.scheduleWithFixedDelay(() -> {
+            delayStarts.add((System.nanoTime() - t0) / 1_000_000);
+            sleep(300);
+        }, 0, 200, TimeUnit.MILLISECONDS);
+
+        Thread.sleep(1700);
+        rate.cancel(false);
+        delay.cancel(false);
+        System.out.println("  fixedRate  bắt đầu lúc (ms): " + rateStarts + "  ← cách nhau ~300 (bị task chậm kéo theo)");
+        System.out.println("  fixedDelay bắt đầu lúc (ms): " + delayStarts + "  ← cách nhau ~500 (300 chạy + 200 nghỉ)");
+
+        // BẪY: exception trong task định kỳ → lịch BỊ HUỶ ÂM THẦM, không log gì
+        AtomicInteger runs = new AtomicInteger();
+        ScheduledFuture<?> fragile = scheduler.scheduleAtFixedRate(() -> {
+            if (runs.incrementAndGet() == 2) throw new IllegalStateException("lỗi lần chạy thứ 2");
+        }, 0, 50, TimeUnit.MILLISECONDS);
+        Thread.sleep(400);
+        System.out.println("  Task ném exception ở lần 2 → chỉ chạy " + runs.get() + " lần rồi DỪNG HẲN, isDone="
+                + fragile.isDone() + "  ✗ không có log nào!");
+        System.out.println("  ⇒ Luôn bọc thân task định kỳ trong try/catch(Throwable) + log.");
+        scheduler.shutdownNow();
+    }
+
     public static void main(String[] args) throws Exception {
         System.out.println("=== EXECUTORSERVICE DEMO ===\n");
 
@@ -240,6 +300,12 @@ public class ExecutorServiceDemo {
         System.out.println("\n--- Demo 6: shutdown đúng cách ---");
         demo6Shutdown();
 
+        System.out.println("\n--- Demo 7: invokeAll / invokeAny ---");
+        demo7InvokeAllAny();
+
+        System.out.println("\n--- Demo 8: ScheduledExecutorService ---");
+        demo8Scheduled();
+
         System.out.println("\n=== INTERVIEW TIPS ===");
         System.out.println("Q: Thứ tự ThreadPoolExecutor xử lý task mới?");
         System.out.println("A: core → queue → (tạo thêm đến max) → reject. Queue vô hạn thì max không bao giờ được dùng.");
@@ -257,5 +323,13 @@ public class ExecutorServiceDemo {
 
         System.out.println("\nQ: shutdown() vs shutdownNow()?");
         System.out.println("A: shutdown chạy nốt việc còn lại; shutdownNow xoá queue và interrupt thread đang chạy.");
+
+        System.out.println("\nQ: scheduleAtFixedRate vs scheduleWithFixedDelay?");
+        System.out.println("A: fixedRate tính chu kỳ từ lúc bắt đầu (task chậm → lần sau chạy ngay, không chồng lấn);");
+        System.out.println("   fixedDelay tính từ lúc kết thúc. Exception trong task → lịch bị huỷ âm thầm.");
+
+        System.out.println("\nQ: Tăng pool size có luôn làm hệ thống nhanh hơn?");
+        System.out.println("A: Không. Nếu nút thắt là DB (connection pool 10) thì 200 worker chỉ xếp hàng chờ connection,");
+        System.out.println("   tốn RAM, tăng context switch, tăng latency đuôi (p99). Pool phải khớp với tài nguyên downstream.");
     }
 }

@@ -41,7 +41,7 @@ public class JavaMemoryModelDemo {
         PlainFlag flag = new PlainFlag();
         Thread t = new Thread(() -> {
             long n = 0;
-            while (!flag.stop) { // JIT có thể hoist việc đọc ra ngoài vòng lặp: nếu flag is false thì tiếp tục while và tăng n++
+            while (!flag.stop) { // JIT có thể hoist việc đọc ra ngoài vòng lặp → while (true) n++
                 n++;
             }
             System.out.println("  [Reader] Thấy stop=true sau " + n + " vòng");
@@ -49,7 +49,7 @@ public class JavaMemoryModelDemo {
         t.setDaemon(true); // để JVM vẫn thoát được nếu thread kẹt vô hạn
         t.start();
 
-        Thread.sleep(500); // đợi để Thread t khởi động nhuưng ko đảm bảo sau 500s sẽ khởi động
+        Thread.sleep(500); // cho reader chạy và JIT kịp tối ưu vòng lặp (không đảm bảo tuyệt đối)
         flag.stop = true; // change the value of flag = true để kết thúc vòng while và Thread thoát đc ra
         t.join(1000); // Main thread waits up to 1 second for reader to terminate.
         if (t.isAlive()) {
@@ -67,7 +67,7 @@ public class JavaMemoryModelDemo {
         volatile boolean ready = false; // volatile làm "cầu nối" happens-before
 
         void write() {
-            // Thứ tự phải đúng để
+            // Thứ tự QUAN TRỌNG: ghi dữ liệu TRƯỚC, ghi cờ volatile SAU
             data = 42;      // (1) ghi thường
             ready = true;   // (2) ghi volatile  → HB → (3)
         }

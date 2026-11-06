@@ -1,311 +1,184 @@
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntSupplier;
 
 /**
- * RACE CONDITION - KẾT QUẢ PHỤ THUỘC VÀO TIMING
- * 
- * Race condition xảy ra khi:
- * - Multiple threads truy cập shared data
- * - Ít nhất 1 thread modify data
- * - Không có synchronization
- * 
- * 2 loại phổ biến:
- * 1. Check-Then-Act - check condition rồi act based on it
- * 2. Read-Modify-Write - đọc value, modify, write back
- * 
- * Interview Question: "Cho ví dụ race condition trong real project?"
- * Answer: Singleton pattern, counter, bank transfer, cache update...
+ * RACE CONDITION - KẾT QUẢ PHỤ THUỘC VÀO THỨ TỰ XEN KẼ CỦA CÁC THREAD
+ *
+ * Điều kiện xảy ra: nhiều thread truy cập shared mutable state, ít nhất 1 thread ghi, không có đồng bộ đúng.
+ *
+ * 2 mẫu kinh điển:
+ *   1. Read-Modify-Write : count++, balance -= x       (đọc → tính → ghi bị xen ngang → lost update)
+ *   2. Check-Then-Act    : if (x == null) x = new X()  (điều kiện đã kiểm tra có thể sai khi hành động)
+ *
+ * Race condition vs Data race (câu hỏi phân loại hay gặp):
+ *   - Data race     : 2 thread truy cập cùng biến, ≥1 ghi, KHÔNG có happens-before (khái niệm của JMM)
+ *   - Race condition: lỗi LOGIC do thứ tự thực thi; có thể xảy ra cả khi không có data race
+ *                     (vd: ConcurrentHashMap get() rồi put() - mỗi thao tác đều thread-safe nhưng chuỗi thì không)
+ *
+ * Để demo thấy lỗi ổn định, một số chỗ cố ý "nới rộng cửa sổ race" bằng sleep/yield + "cổng xuất phát"
+ * (CountDownLatch) cho mọi thread cùng chạy một lúc. Trong production, cửa sổ nhỏ hơn nhiều - lỗi hiếm nhưng VẪN CÓ.
  */
 public class RaceConditionDemo {
 
     // ============================================
     // PROBLEM 1: READ-MODIFY-WRITE
     // ============================================
-    /**
-     * count++ KHÔNG phải atomic operation
-     * Gồm 3 bước: Read → Modify → Write
-     */
     static class UnsafeCounter {
         private int count = 0;
-
-        public void increment() {
-            // NOT ATOMIC!
-            // Step 1: Read count
-            // Step 2: Add 1
-            // Step 3: Write back
-            count++;
-        }
-
-        public int getCount() {
-            return count;
-        }
+        void increment() { count++; }   // getfield → iadd → putfield (xem: javap -c)
+        int get() { return count; }
     }
 
-    // ============================================
-    // SOLUTION 1A: SYNCHRONIZED
-    // ============================================
     static class SafeCounterSync {
         private int count = 0;
-
-        public synchronized void increment() {
-            count++; // Now atomic
-        }
-
-        public synchronized int getCount() {
-            return count;
-        }
+        synchronized void increment() { count++; }
+        synchronized int get() { return count; }
     }
 
-    // ============================================
-    // SOLUTION 1B: ATOMIC VARIABLE (BETTER)
-    // ============================================
     static class SafeCounterAtomic {
-        private AtomicInteger count = new AtomicInteger(0);
-
-        public void increment() {
-            count.incrementAndGet(); // Atomic operation
-        }
-
-        public int getCount() {
-            return count.get();
-        }
+        private final AtomicInteger count = new AtomicInteger();
+        void increment() { count.incrementAndGet(); }   // CAS, lock-free
+        int get() { return count.get(); }
     }
 
     // ============================================
-    // PROBLEM 2: CHECK-THEN-ACT
+    // PROBLEM 2: CHECK-THEN-ACT (lazy initialization)
     // ============================================
-    /**
-     * Lazy initialization với race condition
-     */
     static class UnsafeSingleton {
         private static UnsafeSingleton instance;
 
-        public static UnsafeSingleton getInstance() {
-            if (instance == null) { // Check
-                // Race condition here!
-                // Multiple threads có thể pass check cùng lúc
-                instance = new UnsafeSingleton(); // Act
+        static UnsafeSingleton getInstance() {
+            if (instance == null) {                      // Check
+                Thread.yield();                          // (nới rộng cửa sổ race cho demo)
+                instance = new UnsafeSingleton();        // Act - nhiều thread cùng tới đây
             }
             return instance;
         }
     }
 
-    // ============================================
-    // SOLUTION 2A: SYNCHRONIZED METHOD
-    // ============================================
-    static class SafeSingletonSync {
-        private static SafeSingletonSync instance;
-
-        public static synchronized SafeSingletonSync getInstance() {
-            if (instance == null) {
-                instance = new SafeSingletonSync();
-            }
-            return instance;
-        }
+    /** Fix đơn giản nhất cho lazy singleton: holder idiom - JVM đảm bảo class init chỉ chạy 1 lần, thread-safe. */
+    static class HolderSingleton {
+        private HolderSingleton() { }
+        private static class Holder { static final HolderSingleton INSTANCE = new HolderSingleton(); }
+        static HolderSingleton getInstance() { return Holder.INSTANCE; }
     }
+    // Các phương án khác: synchronized getInstance() (đơn giản, mỗi lần gọi đều lock),
+    // double-checked locking với volatile (xem JavaMemoryModelDemo - vì sao BẮT BUỘC volatile), enum singleton.
 
     // ============================================
-    // SOLUTION 2B: DOUBLE-CHECKED LOCKING (BEST)
+    // PROBLEM 3: COMPOUND OPERATION (check + update)
     // ============================================
-    static class SafeSingletonDCL {
-        private static volatile SafeSingletonDCL instance; // volatile important!
-
-        public static SafeSingletonDCL getInstance() {
-            if (instance == null) { // First check (no lock)
-                synchronized (SafeSingletonDCL.class) {
-                    if (instance == null) { // Second check (with lock)
-                        instance = new SafeSingletonDCL();
-                    }
-                }
-            }
-            return instance;
-        }
-    }
-
-    // ============================================
-    // PROBLEM 3: COMPOUND OPERATIONS
-    // ============================================
-    /**
-     * Multiple operations phải atomic together
-     */
-    static class UnsafeTransfer {
+    static class UnsafeAccount {
         private int balance = 1000;
 
-        public void transfer(int amount) {
-            // Race condition: check và withdraw không atomic
-            if (balance >= amount) { // Check
-                // Another thread có thể withdraw ở đây!
-                balance -= amount; // Act
+        boolean withdraw(int amount) {
+            if (balance >= amount) {                     // Check
+                Thread.yield();                          // (nới rộng cửa sổ race cho demo)
+                balance -= amount;                       // Act (bản thân cũng là read-modify-write)
+                return true;
             }
+            return false;
         }
-
-        public int getBalance() {
-            return balance;
-        }
+        int balance() { return balance; }
     }
 
-    // ============================================
-    // SOLUTION 3: SYNCHRONIZED BLOCK
-    // ============================================
-    static class SafeTransfer {
+    static class SafeAccount {
         private int balance = 1000;
 
-        public void transfer(int amount) {
-            synchronized (this) {
-                if (balance >= amount) {
-                    balance -= amount;
-                }
+        synchronized boolean withdraw(int amount) {      // check + act trong CÙNG một critical section
+            if (balance >= amount) {
+                balance -= amount;
+                return true;
             }
+            return false;
         }
-
-        public synchronized int getBalance() {
-            return balance;
-        }
+        synchronized int balance() { return balance; }
     }
 
     // ============================================
-    // MAIN DEMO
+    // HELPERS - "cổng xuất phát" để mọi thread chạy cùng lúc
     // ============================================
+    static void runConcurrently(int threads, Runnable task) throws InterruptedException {
+        CountDownLatch startGate = new CountDownLatch(1);
+        Thread[] ts = new Thread[threads];
+        for (int i = 0; i < threads; i++) {
+            ts[i] = new Thread(() -> {
+                try {
+                    startGate.await();
+                    task.run();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            ts[i].start();
+        }
+        startGate.countDown();
+        for (Thread t : ts) t.join();
+    }
+
+    static void testCounter(String name, Runnable increment, IntSupplier get) throws InterruptedException {
+        final int THREADS = 8, PER_THREAD = 100_000;
+        runConcurrently(THREADS, () -> { for (int i = 0; i < PER_THREAD; i++) increment.run(); });
+        int expected = THREADS * PER_THREAD;
+        System.out.printf("  %-13s expected=%,d actual=%,d %s%n", name, expected, get.getAsInt(),
+                expected == get.getAsInt() ? "✓" : "✗ lost update");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         System.out.println("=== RACE CONDITION DEMO ===\n");
 
-        final int THREADS = 10;
-        final int INCREMENTS = 1000;
+        System.out.println("--- Demo 1: Read-Modify-Write ---");
+        UnsafeCounter unsafe = new UnsafeCounter();
+        testCounter("Unsafe", unsafe::increment, unsafe::get);
+        SafeCounterSync sync = new SafeCounterSync();
+        testCounter("synchronized", sync::increment, sync::get);
+        SafeCounterAtomic atomic = new SafeCounterAtomic();
+        testCounter("AtomicInteger", atomic::increment, atomic::get);
 
-        // Demo 1: Read-Modify-Write race condition
-        System.out.println("--- Demo 1: Read-Modify-Write Race Condition ---");
-        UnsafeCounter unsafeCounter = new UnsafeCounter();
-        testCounter(() -> unsafeCounter.increment(),
-                    () -> unsafeCounter.getCount(),
-                    THREADS, INCREMENTS, "Unsafe");
+        System.out.println("\n--- Demo 2: Check-Then-Act (lazy singleton) ---");
+        Set<Object> unsafeInstances = Collections.synchronizedSet(new HashSet<>());
+        runConcurrently(50, () -> unsafeInstances.add(UnsafeSingleton.getInstance()));
+        System.out.println("  UnsafeSingleton : " + unsafeInstances.size() + " instance được tạo"
+                + (unsafeInstances.size() == 1 ? "  (may mắn - vẫn SAI)" : "  ✗ (phải là 1)"));
+        Set<Object> holderInstances = Collections.synchronizedSet(new HashSet<>());
+        runConcurrently(50, () -> holderInstances.add(HolderSingleton.getInstance()));
+        System.out.println("  HolderSingleton : " + holderInstances.size() + " instance  ✓");
 
-        SafeCounterSync safeSync = new SafeCounterSync();
-        testCounter(() -> safeSync.increment(),
-                    () -> safeSync.getCount(),
-                    THREADS, INCREMENTS, "Synchronized");
+        System.out.println("\n--- Demo 3: Compound operation (rút tiền) ---");
+        // 150 thread, mỗi thread rút 10 từ tài khoản 1000 → đúng ra chỉ 100 lần thành công, số dư 0
+        UnsafeAccount ua = new UnsafeAccount();
+        AtomicInteger unsafeOk = new AtomicInteger();
+        runConcurrently(150, () -> { if (ua.withdraw(10)) unsafeOk.incrementAndGet(); });
+        System.out.println("  Unsafe : " + unsafeOk.get() + " lần thành công, số dư = " + ua.balance()
+                + (ua.balance() == 0 && unsafeOk.get() == 100 ? "  (may mắn)" : "  ✗ (phải là 100 lần, số dư 0)"));
 
-        SafeCounterAtomic safeAtomic = new SafeCounterAtomic();
-        testCounter(() -> safeAtomic.increment(),
-                    () -> safeAtomic.getCount(),
-                    THREADS, INCREMENTS, "Atomic");
+        SafeAccount sa = new SafeAccount();
+        AtomicInteger safeOk = new AtomicInteger();
+        runConcurrently(150, () -> { if (sa.withdraw(10)) safeOk.incrementAndGet(); });
+        System.out.println("  Safe   : " + safeOk.get() + " lần thành công, số dư = " + sa.balance() + "  ✓");
 
-        // Demo 2: Check-Then-Act race condition
-        System.out.println("\n--- Demo 2: Check-Then-Act (Singleton) ---");
-        testSingleton();
-
-        // Demo 3: Compound operations
-        System.out.println("\n--- Demo 3: Compound Operations ---");
-        UnsafeTransfer unsafeTransfer = new UnsafeTransfer();
-        testTransfer(() -> unsafeTransfer.transfer(10),
-                     () -> unsafeTransfer.getBalance(),
-                     "Unsafe");
-
-        SafeTransfer safeTransfer = new SafeTransfer();
-        testTransfer(() -> safeTransfer.transfer(10), 
-                     () -> safeTransfer.getBalance(), 
-                     "Safe");
-
-        // ============================================
-        // INTERVIEW TIPS
-        // ============================================
         System.out.println("\n=== INTERVIEW TIPS ===");
-        System.out.println("Q: Race condition là gì?");
-        System.out.println("A: Kết quả phụ thuộc vào timing/ordering của threads");
-        System.out.println("   Không deterministic, khó reproduce");
-        
-        System.out.println("\nQ: 2 loại race condition phổ biến?");
-        System.out.println("A: 1. Read-Modify-Write (count++)");
-        System.out.println("   2. Check-Then-Act (if-then pattern)");
-        
-        System.out.println("\nQ: Cách fix race condition?");
-        System.out.println("A: 1. synchronized - simple, works for all");
-        System.out.println("   2. Atomic variables - better performance cho counters");
-        System.out.println("   3. Concurrent collections - built-in thread-safety");
-        System.out.println("   4. Immutable objects - no shared mutable state");
-        
-        System.out.println("\nQ: Làm sao detect race condition?");
-        System.out.println("A: - Stress testing với nhiều threads");
-        System.out.println("   - Thread sanitizers / race detectors");
-        System.out.println("   - Code review - tìm shared mutable state");
-        System.out.println("   - Production bugs - inconsistent results");
-        
-        System.out.println("\nQ: Real-world examples?");
-        System.out.println("A: - Singleton initialization");
-        System.out.println("   - Counter/statistics");
-        System.out.println("   - Cache updates");
-        System.out.println("   - Bank transfers");
-        System.out.println("   - Session management");
+        System.out.println("Q: Race condition là gì? 2 mẫu phổ biến?");
+        System.out.println("A: Kết quả phụ thuộc thứ tự xen kẽ của thread. Read-modify-write (count++) và check-then-act.");
 
-        System.out.println("\n=== PREVENTION CHECKLIST ===");
-        System.out.println("□ Identify shared mutable state");
-        System.out.println("□ Minimize shared state (prefer immutable)");
-        System.out.println("□ Synchronize access to shared state");
-        System.out.println("□ Use thread-safe collections");
-        System.out.println("□ Prefer atomic variables for counters");
-        System.out.println("□ Document thread-safety guarantees");
-    }
+        System.out.println("\nQ: Race condition khác data race?");
+        System.out.println("A: Data race = truy cập không có happens-before (JMM). Race condition = lỗi logic do timing,");
+        System.out.println("   có thể xảy ra dù mọi thao tác riêng lẻ đều thread-safe.");
 
-    // Helper methods
-    private static void testCounter(Runnable incrementTask, 
-                                    java.util.function.Supplier<Integer> getCount,
-                                    int threads, int increments, String name) throws InterruptedException {
-        Thread[] threadArray = new Thread[threads];
+        System.out.println("\nQ: Cách fix?");
+        System.out.println("A: Theo thứ tự ưu tiên: bỏ shared mutable state (immutable, confinement) → thao tác atomic có sẵn");
+        System.out.println("   (AtomicInteger, ConcurrentHashMap.merge/computeIfAbsent) → lock bao trọn cả chuỗi check+act.");
 
-        for (int i = 0; i < threads; i++) {
-            threadArray[i] = new Thread(() -> {
-                for (int j = 0; j < increments; j++) {
-                    incrementTask.run();
-                }
-            });
-            threadArray[i].start();
-        }
+        System.out.println("\nQ: Làm sao phát hiện/tái hiện?");
+        System.out.println("A: Stress test nhiều thread + start gate (CountDownLatch), chạy lặp nhiều lần; code review tìm");
+        System.out.println("   shared mutable state; jcstress cho test JMM nghiêm túc. Không thấy lỗi ≠ code đúng.");
 
-        for (Thread t : threadArray) {
-            t.join();
-        }
-
-        int expected = threads * increments;
-        int actual = getCount.get();
-        
-        System.out.println(name + " - Expected: " + expected + ", Actual: " + actual + 
-                          " " + (expected == actual ? "✓" : "✗"));
-    }
-
-    private static void testSingleton() throws InterruptedException {
-        final int THREADS = 100;
-        Thread[] threads = new Thread[THREADS];
-        final java.util.Set<UnsafeSingleton> instances = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
-
-        for (int i = 0; i < THREADS; i++) {
-            threads[i] = new Thread(() -> {
-                instances.add(UnsafeSingleton.getInstance());
-            });
-            threads[i].start();
-        }
-
-        for (Thread t : threads) {
-            t.join();
-        }
-
-        System.out.println("Unsafe Singleton - Instances created: " + instances.size() + 
-                          (instances.size() == 1 ? " ✓" : " ✗ (should be 1)"));
-    }
-
-    private static void testTransfer(Runnable transferTask, 
-                                     java.util.function.Supplier<Integer> getBalance,
-                                     String name) throws InterruptedException {
-        Thread[] threads = new Thread[100];
-
-        for (int i = 0; i < 100; i++) {
-            threads[i] = new Thread(transferTask);
-            threads[i].start();
-        }
-
-        for (Thread t : threads) {
-            t.join();
-        }
-
-        int balance = getBalance.get();
-        System.out.println(name + " Transfer - Final balance: " + balance + 
-                          (balance == 0 ? " ✓" : " ✗ (should be 0)"));
+        System.out.println("\nQ: Ví dụ thực tế?");
+        System.out.println("A: Đếm metric, cache 'nếu chưa có thì load', kiểm tra tồn kho rồi trừ, cấp ID tăng dần, double-submit.");
+        System.out.println("   Lưu ý: nhiều instance service → lock trong JVM vô dụng; cần DB constraint/optimistic lock/distributed lock.");
     }
 }

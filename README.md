@@ -1,123 +1,69 @@
-# Java Multithreading - Tech Lead Interview Preparation
+# Java Multithreading — Tech Lead Interview Preparation
 
-## 📚 Mục đích
-Project này được thiết kế để chuẩn bị phỏng vấn Tech Lead về Java Multithreading, bao gồm:
-- ✅ Kiến thức cơ bản (thường bị hỏi trong interview)
-- ✅ Kỹ thuật hiện đại (production-ready)
-- ✅ Real-world examples với Spring Boot
+Runnable demos, notes and exercises for Senior / Tech Lead interviews on Java concurrency.
+Every demo **terminates on its own and prints ✓ / ✗**, so you can see each bug happen and each fix work.
 
-## 🗂️ Cấu trúc Project
+## 🗂️ Structure
 
-### 1. Core Fundamentals (`1-core-fundamentals/`)
-Kiến thức nền tảng - **BẮT BUỘC** phải nắm vững cho interview:
-- Thread Creation (3 cách)
-- Thread Lifecycle & States
-- Synchronization & Locks
-- wait/notify/notifyAll
-- volatile keyword
-- Deadlock & Race Conditions
-
-### 2. Advanced Concurrency (`2-advanced-concurrency/`)
-Kỹ thuật hiện đại - **QUAN TRỌNG** cho Tech Lead:
-- ExecutorService & Thread Pools
-- CompletableFuture
-- Fork/Join Framework
-- Concurrent Collections
-- Atomic Variables
-- Synchronizers (CountDownLatch, CyclicBarrier, Semaphore)
-
-### 3. Spring Boot Application (`3-spring-boot-app/`)
-Ứng dụng thực tế - **DEMO** kiến thức trong production:
-- @Async configuration
-- Thread Pool tuning
-- Scheduled tasks
-- Performance monitoring
-
-## 🎯 Câu hỏi Interview thường gặp
-
-### Cơ bản:
-1. **Sự khác biệt giữa Thread và Runnable?**
-   - Thread: Kế thừa class, không thể extend class khác
-   - Runnable: Interface, linh hoạt hơn, best practice
-
-2. **synchronized hoạt động như thế nào?**
-   - Monitor lock trên object
-   - Method level vs Block level
-   - Reentrant lock
-
-3. **volatile vs synchronized?**
-   - volatile: Visibility, không đảm bảo atomicity
-   - synchronized: Cả visibility và atomicity
-
-4. **Deadlock là gì? Cách tránh?**
-   - 4 điều kiện: Mutual exclusion, Hold and wait, No preemption, Circular wait
-   - Giải pháp: Lock ordering, timeout, tryLock()
-
-### Nâng cao:
-5. **ExecutorService vs tạo Thread thủ công?**
-   - Thread pool reuse
-   - Resource management
-   - Better control
-
-6. **CompletableFuture vs Future?**
-   - Non-blocking
-   - Composable
-   - Exception handling tốt hơn
-
-7. **ConcurrentHashMap hoạt động thế nào?**
-   - Segment locking (Java 7)
-   - CAS operations (Java 8+)
-   - Better performance than Hashtable
-
-8. **Khi nào dùng CountDownLatch vs CyclicBarrier?**
-   - CountDownLatch: One-time event, threads wait for completion
-   - CyclicBarrier: Reusable, threads wait for each other
-
-### Tech Lead Level:
-9. **Làm sao tune thread pool size?**
-   - CPU-bound: cores + 1
-   - I/O-bound: cores * (1 + wait/compute ratio)
-   - Monitor và adjust
-
-10. **Cách debug thread issues trong production?**
-    - Thread dumps
-    - JMX monitoring
-    - Profiling tools
-    - Logging strategies
-
-## 🚀 Cách chạy
-
-### Core Fundamentals & Advanced:
-```bash
-cd 1-core-fundamentals
-javac *.java
-java <ClassName>
+```
+1-core-fundamentals/     Threads, lifecycle, race conditions, synchronized, volatile/JMM, wait/notify,
+                         interruption, explicit locks, deadlock/livelock, ThreadLocal, immutability
+                         + interview notes in English (04-Synchronization, 05-Volatile, 06-JavaMemoryModel)
+2-advanced-concurrency/  ThreadPoolExecutor, CompletableFuture, atomics/CAS, concurrent collections,
+                         synchronizers, virtual threads, Fork/Join, thread-dump diagnosis
+3-spring-boot-app/       @Async + bounded executors, MDC propagation, exceptions, timeouts, back-pressure,
+                         @Scheduled, executor metrics — with tests (mvn test)
+4-interview-practice/    Coding exercises with self-checking solutions + Tech Lead scenario answers
+INTERVIEW_QUESTIONS.md   68 questions with interview-ready answers + 5-minute cheat sheet
+Priority.md              P0–P3 checklist and a 2-week study plan
 ```
 
-### Spring Boot App:
+## 🚀 Running
+
+Requires **JDK 21+** (virtual threads, `ExecutorService.close()`); Maven 3.9+ for the Spring app.
+
 ```bash
+# Modules 1, 2, 4: every file is a standalone program — run the source directly
+cd 1-core-fundamentals
+java RaceConditionDemo.java
+
+# Module 3
 cd 3-spring-boot-app
+mvn test
 mvn spring-boot:run
 ```
 
-## 📖 Học theo thứ tự
-1. Đọc README trong từng folder
-2. Chạy code examples
-3. Đọc comments trong code
-4. Thử modify và test
-5. Chuẩn bị giải thích cho interviewer
+On Windows, if Vietnamese text or symbols look broken: `java -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 X.java`.
 
-## 💡 Tips cho Interview
-- Luôn giải thích **WHY** chọn approach đó
-- Đề cập **trade-offs** của mỗi solution
-- Nói về **production considerations** (monitoring, debugging)
-- Cho examples **real-world** đã làm
-- Biết khi nào **KHÔNG NÊN** dùng multithreading
+## 📖 How to study
+
+Follow the 2-week plan in [`Priority.md`](Priority.md). For each topic:
+
+1. **Predict** the output before running a demo.
+2. **Run it several times** — concurrency bugs are non-deterministic; "no bug this time" is not proof.
+3. **Break it**: remove `volatile`/`synchronized`, change `while` → `if`, `notifyAll` → `notify`, use an unbounded queue.
+4. **Explain it aloud in English in 60–90 seconds**, then compare with the `INTERVIEW TIPS` at the end of the file and with [`INTERVIEW_QUESTIONS.md`](INTERVIEW_QUESTIONS.md).
+5. Practise the exercises and scenarios in [`4-interview-practice/`](4-interview-practice/) without looking at the solution first.
+
+### If you only have 3 days
+
+| Day | Focus |
+|---|---|
+| 1 | `RaceConditionDemo`, `SynchronizationDemo`, `VolatileDemo`, `JavaMemoryModelDemo`, `DeadlockDemo` |
+| 2 | `ExecutorServiceDemo`, `CompletableFutureDemo`, `ConcurrentCollectionsDemo`, `VirtualThreadsDemo` |
+| 3 | Spring app (`README` + `curl`), `TECH_LEAD_SCENARIOS.md`, cheat sheet, mock interview |
+
+## 💡 What makes a Tech Lead answer
+
+- Explain **why** and the **trade-off**, not just the API.
+- Talk about **limits**: bounded queues, timeouts, concurrency limits on downstreams.
+- Talk about **observability**: named threads, executor metrics, thread dumps, alerts.
+- Know when **not** to add concurrency, and when the bottleneck is elsewhere (DB pool, downstream, lock).
+- Be honest: "I haven't run X in production, but here is how it works and how I'd validate it" beats an invented story.
 
 ## 📚 Resources
-- Java Concurrency in Practice (Brian Goetz)
-- Official Java Concurrency Tutorial
-- Baeldung Java Concurrency guides
 
----
-**Good luck với interview! 🎯**
+- *Java Concurrency in Practice* — Brian Goetz et al. (still the reference for fundamentals)
+- JEP 444 (Virtual Threads), JEP 491 (synchronized without pinning, Java 24), JEP 506 (Scoped Values, Java 25)
+- `java.util.concurrent` Javadoc — especially `ThreadPoolExecutor`, `ExecutorService` (shutdown pattern), `CompletableFuture`
+- Spring docs: Task Execution and Scheduling; Spring Boot: Task Execution, Virtual Threads, Actuator metrics

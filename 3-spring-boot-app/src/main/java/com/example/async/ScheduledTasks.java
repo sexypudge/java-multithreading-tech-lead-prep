@@ -1,75 +1,68 @@
 package com.example.async;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * SCHEDULED TASKS
- * 
- * @Scheduled patterns:
- * - fixedRate: Fixed interval từ start time
- * - fixedDelay: Fixed interval từ completion time
- * - cron: Cron expression
- * 
- * Interview Question: "fixedRate vs fixedDelay?"
- * Answer: fixedRate - interval từ start, có thể overlap
- *         fixedDelay - interval từ end, không overlap
+ *
+ *   fixedRate  : chu kỳ tính từ lúc BẮT ĐẦU lần trước. Task chạy lâu hơn chu kỳ → lần sau chạy NGAY khi lần trước
+ *                xong. Mặc định KHÔNG chạy chồng lấn (cùng 1 method không bao giờ chạy song song với chính nó).
+ *                (Chỉ chồng lấn nếu thêm @Async lên method scheduled.)
+ *   fixedDelay : chờ N ms SAU KHI lần trước KẾT THÚC.
+ *   cron       : theo lịch "giây phút giờ ngày tháng thứ".
+ *
+ * Bẫy production (câu hỏi Tech Lead):
+ *   1. Scheduler mặc định của Spring Boot chỉ có 1 THREAD → một task chậm làm trễ MỌI task khác.
+ *      → spring.task.scheduling.pool.size (application.properties đặt = 2), thread-name-prefix "sched-".
+ *   2. Chạy N instance (Kubernetes replicas) → mỗi instance đều chạy job → job chạy N lần.
+ *      → Distributed lock (ShedLock, DB row lock) + job phải idempotent.
+ *   3. Exception trong @Scheduled: Spring log lỗi và lần sau VẪN chạy (khác ScheduledExecutorService thuần:
+ *      exception làm lịch bị huỷ âm thầm - xem 2-advanced-concurrency/ExecutorServiceDemo Demo 8).
+ *   4. Job dài + shutdown: cần xử lý interrupt và dừng êm.
  */
 @Component
 public class ScheduledTasks {
 
-    private static final DateTimeFormatter formatter = 
-        DateTimeFormatter.ofPattern("HH:mm:ss");
+    private static final Logger log = LoggerFactory.getLogger(ScheduledTasks.class);
+    private final AtomicInteger heartbeat = new AtomicInteger();
 
-    /**
-     * Fixed rate - chạy mỗi 10 giây
-     * Interval tính từ start time
-     */
-    @Scheduled(fixedRate = 10000)
-    public void fixedRateTask() {
-        System.out.println("[Fixed Rate] " + getCurrentTime() + 
-            " - Thread: " + Thread.currentThread().getName());
+    /** Mỗi 10s tính từ lúc bắt đầu. */
+    @Scheduled(fixedRate = 10_000)
+    public void heartbeat() {
+        log.info("[fixedRate] heartbeat #{}", heartbeat.incrementAndGet());
     }
 
-    /**
-     * Fixed delay - chạy 5 giây sau khi task trước complete
-     * Interval tính từ completion time
-     */
-    @Scheduled(fixedDelay = 5000, initialDelay = 2000)
-    public void fixedDelayTask() {
-        System.out.println("[Fixed Delay] " + getCurrentTime() + 
-            " - Thread: " + Thread.currentThread().getName());
-    }
-
-    /**
-     * Cron expression - chạy mỗi phút
-     * Format: second minute hour day month weekday
-     */
-    @Scheduled(cron = "0 * * * * *")
-    public void cronTask() {
-        System.out.println("[Cron] " + getCurrentTime() + 
-            " - Running every minute");
-    }
-
-    /**
-     * Cleanup task - chạy mỗi 30 giây
-     */
-    @Scheduled(fixedRate = 30000)
-    public void cleanupTask() {
-        System.out.println("[Cleanup] " + getCurrentTime() + 
-            " - Performing cleanup...");
-        // Simulate cleanup work
+    /** Task chậm (3s) với fixedDelay 15s: khoảng cách giữa 2 lần bắt đầu ≈ 18s. */
+    @Scheduled(fixedDelay = 15_000, initialDelay = 2_000)
+    public void cleanup() {
+        log.info("[fixedDelay] cleanup started");
         try {
-            Thread.sleep(2000);
+            Thread.sleep(3_000);
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            Thread.currentThread().interrupt();   // shutdown đang interrupt → dừng, không nuốt
+            return;
         }
-        System.out.println("[Cleanup] " + getCurrentTime() + " - Done");
+        log.info("[fixedDelay] cleanup done");
     }
 
-    private String getCurrentTime() {
-        return LocalDateTime.now().format(formatter);
+    /** Đầu mỗi phút. Trên nhiều instance cần ShedLock: @SchedulerLock(name = "report", lockAtMostFor = "5m"). */
+    @Scheduled(cron = "0 * * * * *")
+    public void minutelyReport() {
+        log.info("[cron] minutely report");
+    }
+
+    /** Tắt scheduling bằng demo.scheduling.enabled=false (test dùng để log đỡ ồn). */
+    @Configuration
+    @EnableScheduling
+    @ConditionalOnProperty(name = "demo.scheduling.enabled", havingValue = "true", matchIfMissing = true)
+    static class SchedulingConfig {
     }
 }

@@ -191,6 +191,6 @@ public class ThreadLocalDemo {
 
         System.out.println("\nQ: Virtual threads thì ThreadLocal còn dùng được không?");
         System.out.println("A: Dùng được, nhưng với hàng triệu virtual thread, mỗi thread một bản sao rất tốn RAM.");
-        System.out.println("   Java 21+ đưa ra ScopedValue (preview) để thay thế cho nhu cầu truyền context.");
+        System.out.println("   ScopedValue (preview ở Java 21-24, chính thức từ Java 25 - JEP 506) là lựa chọn bất biến, rẻ hơn để truyền context.");
     }
 }

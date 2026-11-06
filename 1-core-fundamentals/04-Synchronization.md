@@ -297,16 +297,21 @@ The `testCounter(...)` helper:
 
 For the configured values:
 
--   Threads: `10`
--   Increments per thread: `1000`
--   Expected final count: `10 * 1000 = 10000`
+-   Threads: `8`
+-   Increments per thread: `100_000`
+-   Expected final count: `8 * 100_000 = 800_000`
 
-The unsafe counter may produce a value below the expected count because
-increments can be lost. The synchronized implementations should protect
-the counter when all accesses use the same corresponding lock.
+The unsafe counter typically ends far below the expected count (a run
+on a 14-core machine produced about 170,000) because increments are
+lost. The three synchronized implementations always reach 800,000.
+`join()` matters twice: it makes `main` wait for the workers, and it
+creates a happens-before edge so `main` sees all of their writes.
 
-The source currently comments out the counter test invocations in
-`main()`. The active demonstration is the reentrant-lock example.
+`main()` runs four demos: the counters, reentrancy, **lock targets**
+(same instance blocks ≈ 600 ms; different instances and static vs
+instance do not block ≈ 300 ms), and edge cases (`synchronized(null)`
+throws NPE; an exception inside a synchronized block still releases
+the monitor).
 
 ------------------------------------------------------------------------
 

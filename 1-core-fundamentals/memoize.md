@@ -81,9 +81,11 @@ I would use `wait()` when threads need to coordinate based on a shared condition
 
 **Answer:**
 
-A thread always has to wait when calling join().
+`join()` makes the **calling** thread (here `main`) wait until the target thread terminates.
 
-in the first example, 2 threads can run in parallel. in the second one, main thread have to wait for t1 to end before starting t2
+In the first version, both threads are started before `main` waits, so `t1` and `t2` run in parallel and the total time is roughly the longer of the two. In the second version, `main` waits for `t1` to finish before it even starts `t2`, so the threads run one after the other — sequential execution with extra overhead.
+
+Bonus: a successful return from `join()` also creates a happens-before edge, so `main` sees every write the joined thread made.
 
 ## 11. REENTRANT LOCK: This means a thread can acquire the same lock multiple times without causing a deadlock.
 

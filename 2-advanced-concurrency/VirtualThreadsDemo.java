@@ -1,5 +1,3 @@
-package v2;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -174,6 +172,6 @@ public class VirtualThreadsDemo {
 
         System.out.println("\nQ: ThreadLocal với virtual thread?");
         System.out.println("A: Vẫn dùng được, nhưng mỗi virtual thread có bản riêng và có thể có hàng triệu thread → tốn bộ nhớ.");
-        System.out.println("   Hướng mới: ScopedValue (preview từ Java 21, bản chính thức ở JDK mới hơn - kiểm tra phiên bản của anh). Đừng dùng ThreadLocal để cache object nặng.");
+        System.out.println("   Hướng mới: ScopedValue (preview Java 21-24, chính thức từ Java 25 - JEP 506). Đừng dùng ThreadLocal để cache object nặng.");
     }
 }

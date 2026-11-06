@@ -1,126 +1,149 @@
 package com.example.async;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import java.util.concurrent.CompletableFuture;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
- * REST CONTROLLER - ASYNC ENDPOINTS
- * 
- * Demo các patterns:
- * 1. Sync vs Async comparison
- * 2. Parallel API calls
- * 3. Fire-and-forget
- * 4. Exception handling
+ * Mỗi endpoint minh hoạ một câu hỏi phỏng vấn. Xem README.md để biết lệnh curl và kết quả mong đợi.
  */
 @RestController
 @RequestMapping("/api")
 public class AsyncController {
 
-    @Autowired
-    private AsyncService asyncService;
+    private final AsyncService service;
+    private final ThreadPoolTaskExecutor ioExecutor;
+    private final ThreadPoolTaskExecutor backgroundExecutor;
 
-    /**
-     * Sync endpoint - blocking
-     * Response time = sum of all operations
-     */
+    public AsyncController(AsyncService service,
+                           @Qualifier("ioExecutor") ThreadPoolTaskExecutor ioExecutor,
+                           @Qualifier("backgroundExecutor") ThreadPoolTaskExecutor backgroundExecutor) {
+        this.service = service;
+        this.ioExecutor = ioExecutor;
+        this.backgroundExecutor = backgroundExecutor;
+    }
+
+    /** Tuần tự: tổng latency = cộng dồn (~600 + 800 + 400 = 1800ms). */
     @GetMapping("/sync")
-    public String syncEndpoint() {
-        long start = System.currentTimeMillis();
-        
-        String result1 = asyncService.processSync("Task1");
-        String result2 = asyncService.processSync("Task2");
-        String result3 = asyncService.processSync("Task3");
-        
-        long duration = System.currentTimeMillis() - start;
-        
-        return String.format("Sync completed in %dms\n%s\n%s\n%s", 
-            duration, result1, result2, result3);
+    public Map<String, Object> sync() {
+        long start = System.nanoTime();
+        List<String> results = List.of(
+                service.callDownstreamSync("user-service", 600),
+                service.callDownstreamSync("order-service", 800),
+                service.callDownstreamSync("payment-service", 400));
+        return timed(start, results);
     }
 
-    /**
-     * Async endpoint - non-blocking
-     * Response time = max of all operations (parallel)
-     */
-    @GetMapping("/async")
-    public CompletableFuture<String> asyncEndpoint() {
-        long start = System.currentTimeMillis();
-        
-        CompletableFuture<String> future1 = asyncService.fetchDataAsync("1");
-        CompletableFuture<String> future2 = asyncService.fetchDataAsync("2");
-        CompletableFuture<String> future3 = asyncService.fetchDataAsync("3");
-        
-        return CompletableFuture.allOf(future1, future2, future3)
-            .thenApply(v -> {
-                try {
-                    long duration = System.currentTimeMillis() - start;
-                    return String.format("Async completed in %dms\n%s\n%s\n%s",
-                        duration, future1.get(), future2.get(), future3.get());
-                } catch (Exception e) {
-                    return "Error: " + e.getMessage();
-                }
-            });
-    }
-
-    /**
-     * Parallel API calls
-     * Real-world example: Aggregate data from multiple services
-     */
+    /** Song song: tổng latency ≈ lời gọi chậm nhất (~800ms). Fan-out / fan-in bằng CompletableFuture. */
     @GetMapping("/parallel")
-    public CompletableFuture<String> parallelApiCalls() {
-        long start = System.currentTimeMillis();
-        
-        CompletableFuture<String> userApi = asyncService.callExternalApi("user-service");
-        CompletableFuture<String> orderApi = asyncService.callExternalApi("order-service");
-        CompletableFuture<String> paymentApi = asyncService.callExternalApi("payment-service");
-        
-        return CompletableFuture.allOf(userApi, orderApi, paymentApi)
-            .thenApply(v -> {
-                try {
-                    long duration = System.currentTimeMillis() - start;
-                    return String.format(
-                        "Parallel API calls completed in %dms\n" +
-                        "User: %s\n" +
-                        "Order: %s\n" +
-                        "Payment: %s",
-                        duration, userApi.get(), orderApi.get(), paymentApi.get()
-                    );
-                } catch (Exception e) {
-                    return "Error: " + e.getMessage();
-                }
-            });
+    public CompletableFuture<Map<String, Object>> parallel() {
+        long start = System.nanoTime();
+        CompletableFuture<String> user = service.callDownstream("user-service", 600);
+        CompletableFuture<String> order = service.callDownstream("order-service", 800);
+        CompletableFuture<String> payment = service.callDownstream("payment-service", 400);
+        // Trả CompletableFuture cho Spring MVC: thread Tomcat được nhả ngay, response gửi khi future xong
+        return CompletableFuture.allOf(user, order, payment)
+                .thenApply(v -> timed(start, List.of(user.join(), order.join(), payment.join())));
     }
 
     /**
-     * Fire-and-forget pattern
-     * Return immediately, process in background
+     * Timeout + fallback cho downstream chậm. ⚠ completeOnTimeout KHÔNG huỷ task đang chạy trong pool:
+     * thread io- vẫn bận tới khi lời gọi thật xong → luôn đặt timeout ở chính HTTP/DB client nữa.
      */
-    @PostMapping("/process")
-    public String fireAndForget(@RequestBody List<String> items) {
-        System.out.println("Received " + items.size() + " items");
-        
-        // Process async, không wait
-        items.forEach(item -> asyncService.processAsync(item));
-        
-        return "Processing " + items.size() + " items in background";
+    @GetMapping("/timeout")
+    public CompletableFuture<Map<String, Object>> timeout() {
+        long start = System.nanoTime();
+        return service.callDownstream("slow-recommendation-service", 3000)
+                .completeOnTimeout("fallback: default recommendations", 1, TimeUnit.SECONDS)
+                .thenApply(result -> timed(start, List.of(result)));
     }
 
-    /**
-     * Exception handling demo
-     */
+    /** CompletableFuture lỗi → xử lý bằng exceptionally (cause bị bọc trong CompletionException). */
     @GetMapping("/error")
-    public CompletableFuture<String> errorHandling() {
-        return asyncService.processWithError("error-data")
-            .exceptionally(ex -> "Handled error: " + ex.getMessage());
+    public CompletableFuture<String> error() {
+        return service.failingCall()
+                .exceptionally(ex -> "handled: " + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage()));
+    }
+
+    /** Fire-and-forget: trả về ngay. Recipient chứa "fail" → lỗi chỉ hiện trong log (AsyncUncaughtExceptionHandler). */
+    @PostMapping("/notify")
+    public String sendNotifications(@RequestBody List<String> recipients) {
+        recipients.forEach(service::sendNotification);
+        return "accepted " + recipients.size() + " notifications (check the logs)";
+    }
+
+    /** Bẫy self-invocation: gọi qua proxy chạy trên io-*, gọi this.method() chạy trên thread Tomcat. */
+    @GetMapping("/self-invocation")
+    public Map<String, String> selfInvocation() {
+        Map<String, String> result = new LinkedHashMap<>();
+        result.put("controllerThread", Thread.currentThread().getName());
+        result.put("viaProxy", service.whereAmI().join());
+        result.put("selfInvocation", service.selfInvocation());
+        return result;
     }
 
     /**
-     * Health check
+     * Back-pressure với CallerRunsPolicy: backgroundExecutor (core 2, max 4, queue 10) nhận nhiều task 500ms.
+     * Khi pool + queue đầy, task chạy luôn trên thread Tomcat (http-nio-*) → request này chậm lại.
      */
-    @GetMapping("/health")
-    public String health() {
-        return "OK - Thread: " + Thread.currentThread().getName();
+    @GetMapping("/saturate")
+    public Map<String, Object> saturate(@RequestParam(defaultValue = "30") int tasks) {
+        long start = System.nanoTime();
+        List<CompletableFuture<String>> futures = IntStream.range(0, tasks)
+                .mapToObj(service::slowBackgroundJob)
+                .toList();
+        Map<String, Long> byThreadGroup = futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.groupingBy(name -> name.startsWith("bg-") ? "bg-* (pool)" : name + " (caller ran it)",
+                        TreeMap::new, Collectors.counting()));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("tasks", tasks);
+        result.put("executedBy", byThreadGroup);
+        result.put("elapsedMs", (System.nanoTime() - start) / 1_000_000);
+        return result;
+    }
+
+    /** Ảnh chụp các chỉ số pool - đúng những gì cần đưa lên dashboard/alert. */
+    @GetMapping("/pools")
+    public Map<String, Object> pools() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("ioExecutor", stats(ioExecutor));
+        result.put("backgroundExecutor", stats(backgroundExecutor));
+        return result;
+    }
+
+    private static Map<String, Object> stats(ThreadPoolTaskExecutor executor) {
+        ThreadPoolExecutor tpe = executor.getThreadPoolExecutor();
+        Map<String, Object> s = new LinkedHashMap<>();
+        s.put("poolSize", tpe.getPoolSize());
+        s.put("activeCount", tpe.getActiveCount());
+        s.put("corePoolSize", tpe.getCorePoolSize());
+        s.put("maxPoolSize", tpe.getMaximumPoolSize());
+        s.put("queueSize", tpe.getQueue().size());
+        s.put("queueRemainingCapacity", tpe.getQueue().remainingCapacity());
+        s.put("completedTaskCount", tpe.getCompletedTaskCount());
+        return s;
+    }
+
+    private static Map<String, Object> timed(long startNanos, List<String> results) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("elapsedMs", (System.nanoTime() - startNanos) / 1_000_000);
+        m.put("results", results);
+        return m;
     }
 }

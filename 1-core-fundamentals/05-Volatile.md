@@ -1,12 +1,8 @@
-Sure, I’ll make a simple speaking note for you now.
-
-Here’s a short speaking note you can rehearse. Question 1, what problem does volatile solve? Suggested answer: Volatile ensures memory visibility between threads. When one thread updates a volatile variable, other threads reading it will see see the latest value, and it also establishes a happens-before relationship in the Java memory model rule that guarantees visibility and ordering between threads. So, when one thread writes
-
 # Java Multithreading – Volatile Interview Notes
 
 **Goal:** Trả lời tự nhiên, ngắn gọn trong 20–40 giây cho mỗi câu hỏi.
 
-Không cần học thuộc từng chữ. Anh chỉ cần nhớ cấu trúc và các technical keywords.
+Không cần học thuộc từng chữ — nhớ cấu trúc và các technical keywords. Code minh hoạ: `VolatileDemo.java`, `JavaMemoryModelDemo.java`.
 
 ## 1. What problem does the `volatile` keyword solve?
 
@@ -174,13 +170,3 @@ Nếu chỉ có 5 phút ôn tập trước interview, hãy nhớ 5 câu này:
 
 ---
 
-## 9. Evaluation – Today's interview
-
-| Question | Technical knowledge | English |
-|---|---|---|
-| What problem does volatile solve? | Good | Needs polishing |
-| Why is count++ not atomic? | Good | Good |
-| When should we use volatile? | Good | Needs practice |
-| Is volatile enough for a counter? | Good | Good |
-| Volatile vs synchronized | Needs practice | Not fully tested |
-| Happens-before | Understands basic concept | Needs practice |

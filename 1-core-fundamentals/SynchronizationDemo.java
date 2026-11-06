@@ -1,17 +1,34 @@
+import java.util.function.IntSupplier;
+
 /**
- * SYNCHRONIZATION TRONG JAVA
- * 
- * SynchronizationDemo.md đảm bảo chỉ 1 thread truy cập critical section tại một thời điểm
- * 
- * 3 loại synchronization:
- * 1. Synchronized Method - lock trên instance (this)
- * 2. Synchronized Block - lock trên object cụ thể
- * 3. Static Synchronized - lock trên Class object
- * 
+ * SYNCHRONIZATION TRONG JAVA (intrinsic lock / monitor)
+ *
+ * synchronized đảm bảo HAI thứ:
+ *   1. Mutual exclusion : tại một thời điểm chỉ 1 thread giữ một monitor cụ thể
+ *   2. Visibility       : unlock monitor M happens-before lần lock M tiếp theo
+ *                         → thread sau thấy mọi thay đổi thread trước làm trong khối synchronized
+ *
+ * 3 dạng - quan trọng nhất là biết LOCK TRÊN OBJECT NÀO:
+ *   synchronized instance method  → lock trên 'this'
+ *   synchronized (lockObj) { }    → lock trên lockObj
+ *   static synchronized method    → lock trên Class object (Foo.class)
+ *
  * Interview Question: "synchronized method vs synchronized block?"
- * Answer: Block cho phép fine-grained control, minimize lock scope, better performance
+ * Answer: Khác nhau ở PHẠM VI và LOCK OBJECT. Block cho phép thu hẹp critical section và dùng lock
+ *         private (không ai bên ngoài lock nhầm được). Block KHÔNG tự động nhanh hơn: chỉ có lợi khi
+ *         nó thực sự giảm thời gian giữ lock.
+ *
+ * Tài liệu kèm theo: 04-Synchronization.md (giải thích chi tiết + câu trả lời tiếng Anh).
  */
 public class SynchronizationDemo {
+
+    static void sleep(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 
     // ============================================
     // PROBLEM: RACE CONDITION WITHOUT SYNC
@@ -19,58 +36,35 @@ public class SynchronizationDemo {
     static class UnsafeCounter {
         private int count = 0;
 
-        public void increment() {
-            count++; // NOT atomic! Read-Modify-Write
-        }
-
-        public int getCount() {
-            return count;
-        }
+        void increment() { count++; }      // NOT atomic: read → modify → write
+        int getCount() { return count; }
     }
 
     // ============================================
-    // SOLUTION 1: SYNCHRONIZED METHOD
+    // SOLUTION 1: SYNCHRONIZED METHOD (lock 'this')
     // ============================================
-    /**
-     * Lock trên instance (this)
-     * Toàn bộ method được protect
-     */
     static class SafeCounterMethod {
         private int count = 0;
 
-        // synchronized method - lock on 'this'
-        public synchronized void increment() {
-            count++;
-        }
-
-        public synchronized int getCount() {
-            return count;
-        }
+        synchronized void increment() { count++; }
+        synchronized int getCount() { return count; }   // đọc CŨNG phải synchronized → visibility
     }
 
     // ============================================
-    // SOLUTION 2: SYNCHRONIZED BLOCK (BETTER)
+    // SOLUTION 2: SYNCHRONIZED BLOCK (lock private)
     // ============================================
-    /**
-     * Lock trên object cụ thể
-     * Chỉ critical section được protect
-     * Better performance
-     */
     static class SafeCounterBlock {
         private int count = 0;
-        private final Object lock = new Object(); // Dedicated lock object
+        private final Object lock = new Object();         // private final: code bên ngoài không lock nhầm được
 
-        public void increment() {
-            // Non-critical code here (không cần lock)
-            
-            synchronized (lock) { // Only lock critical section
+        void increment() {
+            // ... code không đụng shared state có thể nằm ngoài lock ...
+            synchronized (lock) {
                 count++;
             }
-            
-            // More non-critical code
         }
 
-        public int getCount() {
+        int getCount() {
             synchronized (lock) {
                 return count;
             }
@@ -78,138 +72,178 @@ public class SynchronizationDemo {
     }
 
     // ============================================
-    // SOLUTION 3: STATIC SYNCHRONIZED
+    // SOLUTION 3: STATIC SYNCHRONIZED (lock Class object)
     // ============================================
-    /**
-     * Lock trên Class object
-     * Dùng cho static methods/fields
-     */
     static class StaticCounter {
         private static int count = 0;
 
-        // Lock on StaticCounter.class
-        public static synchronized void increment() {
-            count++;
+        static synchronized void increment() { count++; }   // ≡ synchronized (StaticCounter.class)
+        static synchronized int getCount() { return count; }
+    }
+
+    // ============================================
+    // REENTRANCY
+    // ============================================
+    static class ReentrantExample {
+        synchronized void outerMethod() {
+            System.out.println("  In outerMethod (giữ monitor của this)");
+            innerMethod();   // cần lại CÙNG monitor → được phép vì intrinsic lock là reentrant
         }
 
-        public static synchronized int getCount() {
-            return count;
+        synchronized void innerMethod() {
+            System.out.println("  In innerMethod - reentrant: không tự deadlock");
         }
     }
 
     // ============================================
-    // DEMO: SO SÁNH UNSAFE VS SAFE
+    // LOCK TARGET: ai block ai?
     // ============================================
+    static class Resource {
+        synchronized void instanceWork(String who) {
+            System.out.println("    " + who + " vào instanceWork của " + this.hashCode());
+            sleep(300);
+        }
+
+        static synchronized void staticWork(String who) {
+            System.out.println("    " + who + " vào staticWork (lock Resource.class)");
+            sleep(300);
+        }
+    }
+
+    /** Chạy 2 việc song song và đo thời gian: ~300ms = không chặn nhau, ~600ms = chặn nhau. */
+    static long runPair(Runnable a, Runnable b) throws InterruptedException {
+        long start = System.nanoTime();
+        Thread t1 = new Thread(a);
+        Thread t2 = new Thread(b);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        return (System.nanoTime() - start) / 1_000_000;
+    }
+
+    static void demoLockTargets() throws InterruptedException {
+        Resource r1 = new Resource();
+        Resource r2 = new Resource();
+
+        long sameInstance = runPair(() -> r1.instanceWork("T1"), () -> r1.instanceWork("T2"));
+        System.out.println("  Cùng instance           : " + sameInstance + "ms  → CHẶN nhau (cùng monitor r1)");
+
+        long diffInstance = runPair(() -> r1.instanceWork("T1"), () -> r2.instanceWork("T2"));
+        System.out.println("  Khác instance           : " + diffInstance + "ms  → KHÔNG chặn (r1 và r2 là 2 monitor khác)");
+
+        long staticVsInstance = runPair(() -> r1.instanceWork("T1"), () -> Resource.staticWork("T2"));
+        System.out.println("  static vs instance      : " + staticVsInstance + "ms  → KHÔNG chặn (Resource.class ≠ r1)");
+        System.out.println("  ⚠ Bẫy: method static sửa field static, method instance cũng sửa field static đó");
+        System.out.println("    → hai lock khác nhau bảo vệ cùng một dữ liệu = KHÔNG thread-safe.");
+    }
+
+    // ============================================
+    // EDGE CASES
+    // ============================================
+    static void demoEdgeCases() throws InterruptedException {
+        // 1. synchronized(null) → NullPointerException
+        Object nullLock = null;
+        try {
+            synchronized (nullLock) {
+                System.out.println("  không bao giờ in");
+            }
+        } catch (NullPointerException e) {
+            System.out.println("  synchronized(null)      → NullPointerException");
+        }
+
+        // 2. Exception trong khối synchronized → monitor VẪN được nhả (khác với Lock quên unlock)
+        Object lock = new Object();
+        try {
+            synchronized (lock) {
+                throw new IllegalStateException("boom");
+            }
+        } catch (IllegalStateException e) {
+            Thread other = new Thread(() -> {
+                synchronized (lock) {
+                    System.out.println("  exception trong sync    → monitor tự nhả, thread khác vào được ✓");
+                }
+            });
+            other.start();
+            other.join();
+        }
+
+        // 3. Lock trên object bị gán lại → mỗi thread có thể lock một object KHÁC NHAU
+        System.out.println("  ⚠ Đừng lock trên field không final (bị gán lại = đổi lock), trên String literal");
+        System.out.println("    hay Integer cache (dùng chung toàn JVM), hay object public (người khác lock nhầm).");
+    }
+
+    // ============================================
+    // HELPER
+    // ============================================
+    static void testCounter(String name, Runnable increment, IntSupplier getCount,
+                            int threads, int increments) throws InterruptedException {
+        Thread[] ts = new Thread[threads];
+        long start = System.nanoTime();
+        for (int i = 0; i < threads; i++) {
+            ts[i] = new Thread(() -> {
+                for (int j = 0; j < increments; j++) increment.run();
+            });
+            ts[i].start();
+        }
+        for (Thread t : ts) t.join();   // join() cũng tạo happens-before: main thấy mọi ghi của worker
+        long ms = (System.nanoTime() - start) / 1_000_000;
+
+        int expected = threads * increments;
+        int actual = getCount.getAsInt();
+        System.out.printf("  %-22s expected=%,d actual=%,d  %4dms  %s%n", name, expected, actual, ms,
+                expected == actual ? "✓" : "✗ RACE CONDITION (mất " + (expected - actual) + " lần cộng)");
+    }
+
     public static void main(String[] args) throws InterruptedException {
         System.out.println("=== SYNCHRONIZATION DEMO ===\n");
 
-        final int THREADS = 10;
-        final int INCREMENTS = 1000;
+        final int THREADS = 8;
+        final int INCREMENTS = 100_000;
 
-//        // Test 1: Unsafe Counter (Race Condition)
-//        System.out.println("--- Test 1: WITHOUT SynchronizationDemo.md ---");
-//        UnsafeCounter unsafeCounter = new UnsafeCounter();
-//        testCounter(() -> unsafeCounter.increment(),
-//                    () -> unsafeCounter.getCount(),
-//                    THREADS, INCREMENTS);
+        System.out.println("--- Demo 1: Counter (unsafe vs 3 dạng synchronized) ---");
+        UnsafeCounter unsafe = new UnsafeCounter();
+        testCounter("Unsafe", unsafe::increment, unsafe::getCount, THREADS, INCREMENTS);
 
-//        // Test 2: Synchronized Method
-//        System.out.println("\n--- Test 2: Synchronized Method ---");
-//        SafeCounterMethod safeMethod = new SafeCounterMethod();
-//        testCounter(() -> safeMethod.increment(),
-//                    () -> safeMethod.getCount(),
-//                    THREADS, INCREMENTS);
-//
-//        // Test 3: Synchronized Block
-//        System.out.println("\n--- Test 3: Synchronized Block ---");
-//        SafeCounterBlock safeBlock = new SafeCounterBlock();
-//        testCounter(() -> safeBlock.increment(),
-//                    () -> safeBlock.getCount(),
-//                    THREADS, INCREMENTS);
-//
-//        // Test 4: Static Synchronized
-//        System.out.println("\n--- Test 4: Static Synchronized ---");
-//        testCounter(() -> StaticCounter.increment(),
-//                    () -> StaticCounter.getCount(),
-//                    THREADS, INCREMENTS);
+        SafeCounterMethod method = new SafeCounterMethod();
+        testCounter("Synchronized method", method::increment, method::getCount, THREADS, INCREMENTS);
 
-        // ============================================
-        // DEMO: REENTRANT LOCK
-        // ============================================
-        System.out.println("\n--- Reentrant Lock Demo ---");
-        ReentrantExample reentrant = new ReentrantExample();
-        reentrant.outerMethod();
-//
-//        // ============================================
-//        // INTERVIEW TIPS
-//        // ============================================
-//        System.out.println("\n=== INTERVIEW TIPS ===");
-//        System.out.println("Q: synchronized method vs block?");
-//        System.out.println("A: Block tốt hơn - minimize lock scope, better performance");
-//        System.out.println("   Method lock toàn bộ, block chỉ lock critical section");
-//
-//        System.out.println("\nQ: synchronized có reentrant không?");
-//        System.out.println("A: CÓ! Thread đã hold lock có thể acquire lại");
-//
-//        System.out.println("\nQ: synchronized trên null object?");
-//        System.out.println("A: NullPointerException!");
-//
-//        System.out.println("\nQ: Performance impact?");
-//        System.out.println("A: Lock contention → context switching → slower");
-//        System.out.println("   Minimize lock scope, use concurrent collections");
-//
-//        System.out.println("\nQ: Alternatives to synchronized?");
-//        System.out.println("A: ReentrantLock, ReadWriteLock, StampedLock");
-//        System.out.println("   Atomic variables, Concurrent collections");
-    }
+        SafeCounterBlock block = new SafeCounterBlock();
+        testCounter("Synchronized block", block::increment, block::getCount, THREADS, INCREMENTS);
 
-    /**
-     * Helper method để test counter
-     */
-    private static void testCounter(Runnable incrementTask, 
-                                    java.util.function.Supplier<Integer> getCount,
-                                    int threads, int increments) throws InterruptedException {
-        Thread[] threadArray = new Thread[threads];
+        testCounter("Static synchronized", StaticCounter::increment, StaticCounter::getCount, THREADS, INCREMENTS);
 
-        long startTime = System.currentTimeMillis();
+        System.out.println("\n--- Demo 2: Reentrancy ---");
+        new ReentrantExample().outerMethod();
 
-        // Create and start threads
-        for (int i = 0; i < threads; i++) {
-            threadArray[i] = new Thread(() -> {
-                for (int j = 0; j < increments; j++) {
-                    incrementTask.run();
-                }
-            });
-            threadArray[i].start();
-        }
+        System.out.println("\n--- Demo 3: Lock target - ai chặn ai? ---");
+        demoLockTargets();
 
-        // Wait for all threads
-        for (Thread t : threadArray) {
-            t.join();
-        }
+        System.out.println("\n--- Demo 4: Edge cases ---");
+        demoEdgeCases();
 
-        long endTime = System.currentTimeMillis();
+        System.out.println("\n=== INTERVIEW TIPS ===");
+        System.out.println("Q: synchronized đảm bảo gì?");
+        System.out.println("A: Mutual exclusion trên CÙNG monitor + visibility (unlock happens-before lock tiếp theo).");
+        System.out.println("   Vì vậy getter cũng phải synchronized, không chỉ setter.");
 
-        int expected = threads * increments;
-        int actual = getCount.get();
-        
-        System.out.println("Expected: " + expected);
-        System.out.println("Actual:   " + actual);
-        System.out.println("Time:     " + (endTime - startTime) + "ms");
-        System.out.println("Result:   " + (expected == actual ? "✓ CORRECT" : "✗ RACE CONDITION!"));
-    }
+        System.out.println("\nQ: synchronized method vs block?");
+        System.out.println("A: Method lock 'this' (hoặc Class) cho cả method. Block chọn lock object và phạm vi.");
+        System.out.println("   Ưu tiên block với private final lock: thu hẹp critical section, tránh code ngoài lock nhầm.");
 
-    /**
-     * Demo Reentrant Lock
-     */
-    static class ReentrantExample {
-        public synchronized void outerMethod() {
-            System.out.println("  In outerMethod");
-            innerMethod(); // Thread đã hold lock, có thể gọi synchronized method khác
-        }
+        System.out.println("\nQ: Hai thread gọi synchronized method trên 2 instance khác nhau có chặn nhau không?");
+        System.out.println("A: Không - mỗi instance có monitor riêng. static synchronized và instance synchronized cũng không chặn nhau.");
 
-        public synchronized void innerMethod() {
-            System.out.println("  In innerMethod - Reentrant lock works!");
-        }
+        System.out.println("\nQ: synchronized có reentrant không? synchronized(null)?");
+        System.out.println("A: Có reentrant (đếm số lần giữ). synchronized(null) → NullPointerException.");
+
+        System.out.println("\nQ: synchronized có chậm không?");
+        System.out.println("A: Không tranh chấp thì rất rẻ (JVM tối ưu). Chậm là do CONTENTION: thread phải chờ, park/unpark,");
+        System.out.println("   context switch. Giảm bằng critical section ngắn, không làm I/O khi giữ lock, tách lock, hoặc");
+        System.out.println("   dùng cấu trúc phù hợp (Atomic*, ConcurrentHashMap, LongAdder).");
+
+        System.out.println("\nQ: Alternatives?");
+        System.out.println("A: ReentrantLock (tryLock/timeout/interruptible/fair/nhiều Condition), ReadWriteLock, StampedLock,");
+        System.out.println("   Atomic*, concurrent collections, immutable objects. Xem ExplicitLockDemo.");
     }
 }

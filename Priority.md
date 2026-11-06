@@ -266,7 +266,7 @@
 
 ---
 
-## 4. Troubleshooting and Testing (`4-troubleshooting-and-testing/`)
+## 4. Troubleshooting and Testing (`2-advanced-concurrency/ThreadDiagnosisDemo.java`, `4-interview-practice/ConcurrencyTestingDemo.java`)
 
 ### 4.1 Troubleshooting
 
@@ -319,7 +319,7 @@
 
 ---
 
-## 5. Interview Practice (`5-interview-practice/`)
+## 5. Interview Practice (`4-interview-practice/`, `INTERVIEW_QUESTIONS.md`)
 
 ### 5.1 Coding Exercises
 

@@ -1,5 +1,3 @@
-package v2;
-
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -49,16 +47,26 @@ public class ConcurrentCollectionsDemo {
         AtomicInteger id = new AtomicInteger();
         final int perThread = 50_000;
 
-        String hashMapResult;
-        try {
-            runInThreads(() -> {
+        // Writer của HashMap là DAEMON + join có timeout: HashMap bị ghi đồng thời có thể làm hỏng cấu trúc
+        // (bucket/tree bin) khiến put() QUAY VÔ HẠN - đã quan sát được trên Java 21, không chỉ Java 7.
+        Thread[] writers = new Thread[THREADS];
+        for (int t = 0; t < THREADS; t++) {
+            writers[t] = new Thread(() -> {
                 int base = id.getAndIncrement() * perThread;
                 for (int i = 0; i < perThread; i++) hashMap.put(base + i, i);
-            });
-            hashMapResult = hashMap.size() + " / " + (THREADS * perThread);
-        } catch (RuntimeException e) {
-            hashMapResult = "ném " + e.getClass().getSimpleName();
+            }, "hashmap-writer-" + t);
+            writers[t].setDaemon(true);
+            writers[t].start();
         }
+        long deadline = System.currentTimeMillis() + 3000;
+        boolean hung = false;
+        for (Thread w : writers) {
+            w.join(Math.max(1, deadline - System.currentTimeMillis()));
+            hung |= w.isAlive();
+        }
+        String hashMapResult = hung
+                ? "TREO - writer vẫn chạy sau 3s (vòng lặp vô hạn trong put() do cấu trúc bị hỏng)"
+                : hashMap.size() + " / " + (THREADS * perThread);
 
         id.set(0);
         runInThreads(() -> {
@@ -68,10 +76,11 @@ public class ConcurrentCollectionsDemo {
 
         boolean lucky = hashMapResult.equals((THREADS * perThread) + " / " + (THREADS * perThread));
         System.out.println("  HashMap           : size = " + hashMapResult
-                + (lucky ? "  (lần này may mắn đủ - máy ít core ít bị xen ngang; KHÔNG có nghĩa là an toàn)"
+                + (hung ? "  ✗" : lucky ? "  (lần này may mắn đủ - KHÔNG có nghĩa là an toàn)"
                          : "  ✗ thiếu = mất dữ liệu do ghi đè khi resize/chèn đồng thời"));
         System.out.println("  ConcurrentHashMap : size = " + chm.size() + " / " + (THREADS * perThread) + "  ✓");
-        System.out.println("  (Java 7 trở xuống, HashMap song song còn có thể treo vòng lặp vô hạn khi resize.)");
+        System.out.println("  → HashMap dùng chung: mất dữ liệu, ném exception, hoặc TREO 100% CPU (mọi phiên bản Java).");
+        System.out.println("    Production: CPU 100% + thread dump thấy RUNNABLE trong HashMap.put/TreeNode = dấu hiệu kinh điển.");
     }
 
     // ============================================
@@ -226,5 +235,13 @@ public class ConcurrentCollectionsDemo {
 
         System.out.println("\nQ: ThreadPoolExecutor liên quan gì BlockingQueue?");
         System.out.println("A: workQueue của pool chính là một BlockingQueue; worker thread take() task từ đó.");
+
+        System.out.println("\nQ: Cần map/set CÓ THỨ TỰ và thread-safe?");
+        System.out.println("A: ConcurrentSkipListMap / ConcurrentSkipListSet (lock-free, O(log n), có firstKey/headMap...).");
+        System.out.println("   Không có 'ConcurrentTreeMap'; Collections.synchronizedSortedMap thì khoá toàn bảng.");
+
+        System.out.println("\nQ: size() / iterator của ConcurrentHashMap có chính xác không?");
+        System.out.println("A: Weakly consistent: iterator không ném ConcurrentModificationException, có thể thấy hoặc không");
+        System.out.println("   thấy thay đổi đang diễn ra; size() chỉ là ước lượng khi có ghi đồng thời.");
     }
 }

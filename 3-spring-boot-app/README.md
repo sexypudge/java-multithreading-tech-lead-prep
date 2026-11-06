@@ -1,194 +1,102 @@
-# Spring Boot Async Application
+# 3. Spring Boot Async Demo
 
-## 📋 Overview
-Real-world Spring Boot application demonstrating multithreading concepts:
-- @Async methods
-- Thread pool configuration
-- Scheduled tasks
-- CompletableFuture integration
-- Performance monitoring
+Ứng dụng Spring Boot nhỏ để **chạy và quan sát** những gì hay bị hỏi về concurrency trong Spring:
+`@Async` qua proxy, executor có giới hạn + bulkhead, truyền MDC sang thread pool, exception theo kiểu trả về,
+timeout + fallback, back-pressure bằng `CallerRunsPolicy`, `@Scheduled`, metric của executor, graceful shutdown.
 
-## 🚀 Chạy Application
+- **Lý thuyết + checklist review code:** [`NOTES.md`](NOTES.md)
+- **Bằng chứng chạy được:** `src/test/java/.../AsyncBehaviorTest.java` (`mvn test`)
 
-### Prerequisites
-- Java 17+
-- Maven 3.6+
+## Yêu cầu & chạy
 
-### Build & Run
+JDK 21, Maven 3.9+, Spring Boot 3.5.
+
 ```bash
 cd 3-spring-boot-app
-mvn clean install
-mvn spring-boot:run
+mvn test               # 6 test: proxy, self-invocation, MDC, exception, song song, timeout
+mvn spring-boot:run    # http://localhost:8080
 ```
 
-Application sẽ chạy tại: http://localhost:8080
+## Cấu trúc
 
-## 🔍 API Endpoints
+| File | Minh hoạ |
+|---|---|
+| `AsyncConfig` | 2 executor (bulkhead): `ioExecutor` (Abort → fail fast) và `backgroundExecutor` (CallerRuns → back-pressure); queue có giới hạn; `MdcTaskDecorator`; `AsyncUncaughtExceptionHandler`; shutdown êm |
+| `AsyncService` | `@Async` trả `CompletableFuture` / `void`; ném exception; **self-invocation** |
+| `AsyncController` | Các endpoint bên dưới |
+| `RequestIdFilter` | Đặt `requestId` vào MDC → log in `[req=...]` cả trên thread của pool |
+| `ScheduledTasks` | fixedRate / fixedDelay / cron và các bẫy production (1 thread mặc định, nhiều instance) |
+| `application.properties` | Graceful shutdown, scheduler pool, actuator, cờ virtual threads |
 
-### 1. Sync vs Async Comparison
+## Endpoints - chạy thử và quan sát
+
 ```bash
-# Sync - blocking, slow
-curl http://localhost:8080/api/sync
+# 1. Tuần tự vs song song: ~1800ms vs ~800ms
+curl localhost:8080/api/sync
+curl localhost:8080/api/parallel
 
-# Async - non-blocking, fast
-curl http://localhost:8080/api/async
+# 2. Self-invocation: viaProxy chạy trên io-*, selfInvocation chạy trên thread Tomcat (http-nio-*)
+curl localhost:8080/api/self-invocation
+
+# 3. Timeout + fallback sau 1s (downstream mất 3s). Xem log: thread io-* vẫn bận thêm 2s → timeout KHÔNG huỷ task
+curl localhost:8080/api/timeout
+
+# 4. Exception trong CompletableFuture được xử lý bằng exceptionally
+curl localhost:8080/api/error
+
+# 5. Fire-and-forget (void): trả về ngay; "bob-fail" chỉ xuất hiện trong LOG qua AsyncUncaughtExceptionHandler
+curl -X POST localhost:8080/api/notify -H "Content-Type: application/json" -d '["alice","bob-fail","carol"]'
+
+# 6. Back-pressure: backgroundExecutor (core 2, max 4, queue 10) nhận 30 task 500ms
+#    → một phần task chạy trên thread Tomcat (CallerRunsPolicy), request chậm lại thay vì OOM
+curl "localhost:8080/api/saturate?tasks=30"
+
+# 7. Chỉ số pool (gọi trong lúc 6 đang chạy để thấy active/queue tăng)
+curl localhost:8080/api/pools
+
+# 8. Theo dõi một request qua nhiều thread: tự đặt requestId rồi grep log
+curl -H "X-Request-Id: demo-42" localhost:8080/api/parallel
 ```
 
-### 2. Parallel API Calls
+Log mẫu của lệnh 8 - cùng `req=demo-42` trên các thread khác nhau nhờ `MdcTaskDecorator`:
+
+```
+INFO  [io-1           ] [req=demo-42] AsyncService : calling user-service (600 ms)
+INFO  [io-2           ] [req=demo-42] AsyncService : calling order-service (800 ms)
+INFO  [io-3           ] [req=demo-42] AsyncService : calling payment-service (400 ms)
+```
+
+Thử bỏ `executor.setTaskDecorator(...)` trong `AsyncConfig` → log async mất `req=`.
+
+## Actuator
+
 ```bash
-# Simulate calling multiple services in parallel
-curl http://localhost:8080/api/parallel
+curl localhost:8080/actuator/metrics/executor.active?tag=name:ioExecutor
+curl localhost:8080/actuator/metrics/executor.queued?tag=name:backgroundExecutor
+curl localhost:8080/actuator/metrics/executor.pool.size?tag=name:ioExecutor
+curl localhost:8080/actuator/threaddump        # jstack qua HTTP
+curl localhost:8080/actuator/health
 ```
 
-### 3. Fire-and-Forget
-```bash
-# Process items in background
-curl -X POST http://localhost:8080/api/process \
-  -H "Content-Type: application/json" \
-  -d '["item1", "item2", "item3"]'
-```
+Spring Boot tự gắn metric `executor.*` cho mọi bean `ThreadPoolTaskExecutor` (tag `name` = tên bean).
+Đây là những số liệu cần đưa lên dashboard và alert (xem `4-interview-practice/TECH_LEAD_SCENARIOS.md`, S9).
 
-### 4. Error Handling
-```bash
-# Demo exception handling in async
-curl http://localhost:8080/api/error
-```
+## Thử nghiệm thêm
 
-### 5. Health Check
-```bash
-curl http://localhost:8080/api/health
-curl http://localhost:8080/actuator/health
-```
+- **Virtual threads:** bỏ comment `spring.threads.virtual.enabled=true` → thread Tomcat thành virtual (`/api/self-invocation` sẽ thấy `controllerThread` dạng `tomcat-handler-N`). Executor tự định nghĩa vẫn là platform pool có giới hạn.
+- **Scheduler 1 thread:** đặt `spring.task.scheduling.pool.size=1` → `cleanup` (3s) làm trễ `heartbeat`.
+- **Queue vô hạn:** đặt `setQueueCapacity(Integer.MAX_VALUE)` cho `backgroundExecutor` rồi gọi `/api/saturate?tasks=200` → không còn CallerRuns, `maxPoolSize` không bao giờ được dùng, queue phình.
+- **Graceful shutdown:** gọi `/api/timeout` rồi Ctrl+C ngay → request đang chạy vẫn được trả lời trước khi app dừng.
 
-## 🎯 Key Concepts Demonstrated
+## Câu hỏi phỏng vấn được minh hoạ
 
-### 1. @Async Configuration
-- Custom thread pool (AsyncConfig.java)
-- Core/Max pool size tuning
-- Queue capacity
-- Rejection policies
-
-### 2. Async Methods
-- Fire-and-forget (void return)
-- With return value (CompletableFuture)
-- Exception handling
-- Self-invocation pitfall
-
-### 3. Scheduled Tasks
-- @Scheduled with fixedRate
-- @Scheduled with fixedDelay
-- Cron expressions
-- Separate executor for scheduled tasks
-
-### 4. Performance Patterns
-- Parallel execution
-- Non-blocking I/O
-- Resource pooling
-- Monitoring with Actuator
-
-## 📊 Monitoring
-
-### Thread Pool Metrics
-```bash
-curl http://localhost:8080/actuator/metrics
-```
-
-### Application Health
-```bash
-curl http://localhost:8080/actuator/health
-```
-
-## 🎓 Interview Topics Covered
-
-### Configuration
-**Q: Làm sao configure thread pool cho @Async?**
-- Implement AsyncConfigurer hoặc define @Bean Executor
-- Set core/max pool size, queue capacity
-- Choose rejection policy
-
-**Q: Thread pool size bao nhiêu là đủ?**
-- CPU-bound: cores + 1
-- I/O-bound: cores * (1 + wait/compute)
-- Monitor và adjust
-
-### Common Issues
-**Q: @Async không work, tại sao?**
-- Self-invocation (gọi từ cùng class)
-- Method không public
-- Quên @EnableAsync
-- Không có thread pool config
-
-**Q: Exception trong @Async method?**
-- Return CompletableFuture và handle với exceptionally()
-- Hoặc implement AsyncUncaughtExceptionHandler
-
-### Best Practices
-**Q: Khi nào dùng @Async?**
-- I/O operations (API calls, DB queries)
-- Long-running tasks
-- Fire-and-forget operations
-- Parallel processing
-
-**Q: Khi nào KHÔNG nên dùng @Async?**
-- CPU-intensive tasks (dùng ForkJoin)
-- Transactions (async breaks transaction context)
-- Quick operations (overhead không đáng)
-
-## 🔧 Tuning Tips
-
-### Thread Pool Sizing
-```java
-// Conservative start
-corePoolSize = 5
-maxPoolSize = 10
-queueCapacity = 100
-
-// Monitor metrics:
-// - Active threads
-// - Queue size
-// - Rejection count
-
-// Adjust based on:
-// - CPU usage
-// - Response time
-// - Throughput
-```
-
-### Rejection Policies
-- **AbortPolicy** - Throw exception (default)
-- **CallerRunsPolicy** - Run in caller thread (backpressure)
-- **DiscardPolicy** - Silently discard
-- **DiscardOldestPolicy** - Discard oldest in queue
-
-## 📚 Files Structure
-```
-src/main/java/com/example/async/
-├── AsyncDemoApplication.java  - Main application
-├── AsyncConfig.java           - Thread pool config
-├── AsyncService.java          - @Async methods
-├── AsyncController.java       - REST endpoints
-└── ScheduledTasks.java        - Scheduled jobs
-```
-
-## 💡 Production Considerations
-1. **Monitoring** - Track thread pool metrics
-2. **Alerting** - Alert on high rejection rate
-3. **Graceful Shutdown** - Wait for tasks to complete
-4. **Circuit Breaker** - Protect external calls
-5. **Rate Limiting** - Prevent overload
-6. **Logging** - Log thread names for debugging
-
-## 🎯 Testing Tips
-```bash
-# Load test với Apache Bench
-ab -n 1000 -c 10 http://localhost:8080/api/async
-
-# Monitor threads
-jstack <pid> | grep "Async-"
-
-# Check thread pool
-curl http://localhost:8080/actuator/metrics/executor.active
-```
-
----
-**Good luck với interview! 🚀**
+| Câu hỏi | Xem |
+|---|---|
+| `@Async` hoạt động thế nào, vì sao gọi trong cùng class không async? | `/api/self-invocation`, `AsyncBehaviorTest` |
+| Pool mặc định của `@Async` là gì, cấu hình thế nào? | `AsyncConfig`, `NOTES.md` §2 |
+| Exception của `@Async` đi đâu? | `/api/error`, `/api/notify`, `getAsyncUncaughtExceptionHandler` |
+| Vì sao log mất traceId trong `@Async`? | `MdcTaskDecorator`, `RequestIdFilter` |
+| `@Transactional` có sang `@Async` không? | `NOTES.md` §3 |
+| fixedRate vs fixedDelay, chạy nhiều instance thì sao? | `ScheduledTasks` |
+| Rejection policy nào cho trường hợp nào? | `ioExecutor` (Abort) vs `backgroundExecutor` (CallerRuns), `/api/saturate` |
+| Theo dõi thread pool trong production? | `/api/pools`, `/actuator/metrics/executor.*` |
