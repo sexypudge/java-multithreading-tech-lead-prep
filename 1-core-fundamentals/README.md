@@ -23,8 +23,8 @@ Học theo mạch: *tạo thread → thấy vấn đề → giải pháp → v�
 | 1 | `ThreadCreationExamples` | Thread/Runnable/Callable, `start()` vs `run()`, start 2 lần |
 | 2 | `ThreadLifecycleDemo` + `ThreadBasicsDemo` | 6 state thật sự, `join/sleep/yield`, daemon, uncaught exception |
 | 3 | `RaceConditionDemo` | **Thấy lỗi trước**: read-modify-write, check-then-act, compound op |
-| 4 | `SynchronizationDemo` (+ `04-Synchronization.md`) | method / block / static, lock nào chặn lock nào, reentrant |
-| 5 | `VolatileDemo` + `JavaMemoryModelDemo` (+ `05-Volatile.md`, `06-JavaMemoryModel.md`) | Visibility, ordering, **happens-before**, DCL, safe publication |
+| 4 | `SynchronizationDemo` | method / block / static, lock nào chặn lock nào, reentrant |
+| 5 | `VolatileDemo` + `JavaMemoryModelDemo` | Visibility, ordering, **happens-before**, DCL, safe publication |
 | 6 | `WaitNotifyDemo` | Producer-Consumer, `while` vs `if`, `notify` vs `notifyAll` |
 | 7 | `ThreadInterruptionDemo` | Dừng thread an toàn, xử lý `InterruptedException` |
 | 8 | `ExplicitLockDemo` | `ReentrantLock`, `Condition`, `ReadWriteLock`, `StampedLock` |
@@ -51,7 +51,26 @@ Học theo mạch: *tạo thread → thấy vấn đề → giải pháp → v�
 | `ThreadLocalDemo` | `SimpleDateFormat`, request context, rò rỉ trong pool, `InheritableThreadLocal` | ThreadLocal gây leak thế nào? |
 | `ImmutabilityDemo` | Immutable class, `record`, defensive copy, view vs copy, snapshot + volatile | `final` có làm object immutable không? |
 
-**Ghi chú ôn tập (Interview English):** `04-Synchronization.md`, `05-Volatile.md`, `06-JavaMemoryModel.md`, `memoize.md` (câu hỏi đã luyện).
+**Ghi chú ôn tập (Interview English)** — mỗi class một file, cùng format: kiến thức (tiếng Việt) → câu hỏi + *Key sentence* + câu trả lời 30–45 giây → 5 câu cần nhớ → từ vựng → self-test.
+
+| # | File | Class |
+|---|---|---|
+| 01 | `01-ThreadCreation.md` | `ThreadCreationExamples` |
+| 02 | `02-ThreadLifecycle.md` | `ThreadLifecycleDemo` |
+| 03 | `03-ThreadBasics.md` | `ThreadBasicsDemo` |
+| 04 | `04-RaceCondition.md` | `RaceConditionDemo` |
+| 05 | `05-Synchronization.md` | `SynchronizationDemo` |
+| 06 | `06-Volatile.md` | `VolatileDemo` |
+| 07 | `07-JavaMemoryModel.md` | `JavaMemoryModelDemo` |
+| 08 | `08-WaitNotify.md` | `WaitNotifyDemo` |
+| 09 | `09-ThreadInterruption.md` | `ThreadInterruptionDemo` |
+| 10 | `10-ExplicitLock.md` | `ExplicitLockDemo` |
+| 11 | `11-Deadlock.md` | `DeadlockDemo` |
+| 12 | `12-LivelockStarvation.md` | `LivelockStarvationDemo` |
+| 13 | `13-ThreadLocal.md` | `ThreadLocalDemo` |
+| 14 | `14-Immutability.md` | `ImmutabilityDemo` |
+
+`memoize.md`: câu hỏi đã luyện (ghi chú cá nhân).
 
 ## 🧠 Phương pháp học mỗi file (5 bước)
 
@@ -69,7 +88,7 @@ Mọi demo đều **tự kết thúc** (thread có thể kẹt vĩnh viễn đư
 
 | File | Lưu ý |
 |------|-------|
-| `VolatileDemo`, `JavaMemoryModelDemo` (Demo 1, 4) | Có máy không tái hiện được lỗi visibility/reordering. Không thấy lỗi ≠ code đúng. |
+| `VolatileDemo` (Demo 1), `JavaMemoryModelDemo` (Demo 3) | Có máy không tái hiện được lỗi visibility/reordering. Không thấy lỗi ≠ code đúng. |
 | `LivelockStarvationDemo` | Chênh lệch fair/unfair khác nhau theo máy/OS. |
 | `ThreadLocalDemo` | Số lỗi `SimpleDateFormat` dùng chung thay đổi mỗi lần (có thể 0 nhưng vẫn sai). |
 | `DeadlockDemo` | Trong lúc chạy Demo 1, thử `jcmd <pid> Thread.print` để thấy "Found one Java-level deadlock". |

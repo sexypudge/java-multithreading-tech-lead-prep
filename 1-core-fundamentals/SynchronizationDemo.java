@@ -18,7 +18,7 @@ import java.util.function.IntSupplier;
  *         private (không ai bên ngoài lock nhầm được). Block KHÔNG tự động nhanh hơn: chỉ có lợi khi
  *         nó thực sự giảm thời gian giữ lock.
  *
- * Tài liệu kèm theo: 04-Synchronization.md (giải thích chi tiết + câu trả lời tiếng Anh).
+ * Tài liệu kèm theo: 05-Synchronization.md (giải thích + câu trả lời tiếng Anh).
  */
 public class SynchronizationDemo {
 

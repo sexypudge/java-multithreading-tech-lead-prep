@@ -15,7 +15,7 @@
  * Answer: volatile - visibility + ordering, không lock, không mutual exclusion.
  *         synchronized - mutual exclusion + visibility → bảo vệ được thao tác ghép.
  *
- * Tài liệu kèm theo: 05-Volatile.md
+ * Tài liệu kèm theo: 06-Volatile.md
  */
 public class VolatileDemo {
 
@@ -159,8 +159,8 @@ public class VolatileDemo {
         System.out.println("   Đắt hơn biến thường, thường rẻ hơn lock có tranh chấp.");
 
         System.out.println("\nQ: Happens-before của volatile?");
-        System.out.println("A: Ghi volatile V happens-before mọi lần đọc V sau đó. Mọi ghi thường TRƯỚC lần ghi volatile");
-        System.out.println("   cũng visible với thread đọc được giá trị mới (piggybacking) - nền tảng của safe publication.");
+        System.out.println("A: Ghi volatile V happens-before mọi lần đọc V sau đó.");
+        System.out.println("   (Chi tiết: piggybacking, safe publication, các quy tắc HB khác → JavaMemoryModelDemo.)");
 
         System.out.println("\n=== DECISION TREE ===");
         System.out.println("Cần thread-safety cho...");

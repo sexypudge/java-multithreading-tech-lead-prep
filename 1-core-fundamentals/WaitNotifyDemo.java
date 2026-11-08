@@ -37,6 +37,33 @@ public class WaitNotifyDemo {
     // ============================================
     // DEMO 1: BOUNDED BUFFER - Producer/Consumer đúng chuẩn
     // ============================================
+    /**
+     * DIỄN BIẾN TỪNG BƯỚC (trường hợp Consumer chạy trước, queue đang EMPTY):
+     *   (1) Consumer vào synchronized(lock) → giữ monitor
+     *   (2) queue.isEmpty() == true
+     *   (3) Consumer gọi lock.wait() → NHẢ monitor, chuyển WAITING
+     *   (4) Producer vào synchronized(lock) → giữ monitor (lúc này mới vào được)
+     *   (5) queue chưa FULL → bỏ qua while, add item
+     *   (6) Producer gọi notifyAll() → Consumer thức dậy nhưng CHƯA chạy:
+     *       chuyển BLOCKED vì monitor vẫn do Producer giữ (notify KHÔNG nhả lock)
+     *   (7) Producer thoát synchronized → nhả monitor
+     *   (8) Consumer giành lại monitor, KIỂM TRA LẠI điều kiện while, rồi poll item
+     *
+     * Nếu Producer chạy trước: notifyAll() ở (6) không đánh thức ai (chưa ai wait) và tín hiệu
+     * KHÔNG được lưu lại. Vẫn đúng, vì Consumer vào sau sẽ thấy queue không rỗng nên không wait.
+     * → Code đúng phải chạy đúng với MỌI thứ tự, nhờ "kiểm tra điều kiện" chứ không nhờ "nhận tín hiệu".
+     *
+     * TRẠNG THÁI THREAD:
+     *   Gọi wait() và đang chờ              → WAITING (wait(timeout) → TIMED_WAITING)
+     *   Được notify, chờ lấy lại monitor     → BLOCKED
+     *   Đã lấy lại monitor                   → RUNNABLE
+     *   Gọi sleep(ms)                        → TIMED_WAITING (và VẪN GIỮ mọi lock)
+     *
+     * MONITOR NÀO? wait/notify phải gọi trên ĐÚNG object đang synchronized:
+     *   synchronized method (instance) → monitor của this      → gọi wait()/notify()
+     *   static synchronized method     → monitor của X.class   → gọi X.class.wait()
+     *   synchronized(lock)             → monitor của lock      → gọi lock.wait()/lock.notify()
+     */
     static class BoundedBuffer {
         private final Queue<Integer> queue = new ArrayDeque<>();
         private final int capacity;
@@ -71,6 +98,7 @@ public class WaitNotifyDemo {
         BoundedBuffer buffer = new BoundedBuffer(3);
         final int PRODUCERS = 2, CONSUMERS = 2, ITEMS_PER_PRODUCER = 1000;
         AtomicLong consumedSum = new AtomicLong();
+        final int TOTAL_ITEMS = PRODUCERS * ITEMS_PER_PRODUCER;
         List<Thread> threads = new ArrayList<>();
 
         for (int p = 0; p < PRODUCERS; p++) {
@@ -83,9 +111,11 @@ public class WaitNotifyDemo {
             }, "Producer-" + p));
         }
         for (int c = 0; c < CONSUMERS; c++) {
+            // chia đều tổng số item cho các consumer; consumer cuối nhận phần dư
+            int toTake = TOTAL_ITEMS / CONSUMERS + (c == CONSUMERS - 1 ? TOTAL_ITEMS % CONSUMERS : 0);
             threads.add(new Thread(() -> {
                 try {
-                    for (int i = 0; i < ITEMS_PER_PRODUCER; i++) consumedSum.addAndGet(buffer.take());
+                    for (int i = 0; i < toTake; i++) consumedSum.addAndGet(buffer.take());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
