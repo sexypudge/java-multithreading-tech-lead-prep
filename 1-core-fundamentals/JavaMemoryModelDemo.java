@@ -25,42 +25,16 @@ import java.util.concurrent.CyclicBarrier;
  * Answer: Là quan hệ đảm bảo visibility + ordering giữa 2 hành động. Ví dụ ghi volatile
  *         rồi đọc volatile cùng biến: mọi ghi thường trước đó cũng được thấy.
  *
+ * HỌC SAU VolatileDemo: VolatileDemo cho thấy VẤN ĐỀ visibility (cờ dừng vòng lặp) và CÁCH DÙNG volatile.
+ *        File này giải thích VÌ SAO nó đúng và mở rộng sang các nguồn happens-before khác.
+ *
  * LƯU Ý: Một số demo phụ thuộc JIT/CPU nên kết quả "lỗi" có thể không xuất hiện
  *        trên mọi máy. Không thấy lỗi KHÔNG có nghĩa là code đúng.
  */
 public class JavaMemoryModelDemo {
 
     // ============================================
-    // DEMO 1: VISIBILITY - biến không volatile
-    // ============================================
-    static class PlainFlag {
-        boolean stop = false; // KHÔNG volatile
-    }
-
-    static void demo1Visibility() throws InterruptedException {
-        PlainFlag flag = new PlainFlag();
-        Thread t = new Thread(() -> {
-            long n = 0;
-            while (!flag.stop) { // JIT có thể hoist việc đọc ra ngoài vòng lặp → while (true) n++
-                n++;
-            }
-            System.out.println("  [Reader] Thấy stop=true sau " + n + " vòng");
-        }, "PlainReader");
-        t.setDaemon(true); // để JVM vẫn thoát được nếu thread kẹt vô hạn
-        t.start();
-
-        Thread.sleep(500); // cho reader chạy và JIT kịp tối ưu vòng lặp (không đảm bảo tuyệt đối)
-        flag.stop = true; // change the value of flag = true để kết thúc vòng while và Thread thoát đc ra
-        t.join(1000); // Main thread waits up to 1 second for reader to terminate.
-        if (t.isAlive()) {
-            System.out.println("  ✗ Reader KHÔNG thấy thay đổi sau 1 giây → lỗi visibility (không có HB)"); // sau 1s, Flag đã được ghi true, nhưng reader chưa thoát
-        } else {
-            System.out.println("  (Lần này reader thoát - JIT chưa tối ưu. Vẫn là code SAI theo JMM.)"); // Lần này reader thoát nhưng code vẫn sai
-        }
-    }
-
-    // ============================================
-    // DEMO 2: SAFE PUBLICATION bằng volatile
+    // DEMO 1: SAFE PUBLICATION bằng volatile
     // ============================================
     static class Publisher {
         int data = 0;                 // biến thường
@@ -86,7 +60,7 @@ public class JavaMemoryModelDemo {
         }
     }
 
-    static void demo2VolatilePublication() throws InterruptedException {
+    static void demo1VolatilePublication() throws InterruptedException {
         Publisher p = new Publisher();
         Thread reader = new Thread(() -> System.out.println("  [Reader] data = " + p.read() + "  ✓ luôn là 42"));
         reader.start();
@@ -101,12 +75,12 @@ public class JavaMemoryModelDemo {
     }
 
     // ============================================
-    // DEMO 3: Thread.start() và join() tạo happens-before
+    // DEMO 2: Thread.start() và join() tạo happens-before
     // ============================================
     static int sharedBeforeStart = 0;
     static int sharedByWorker = 0;
 
-    static void demo3StartJoin() throws InterruptedException {
+    static void demo2StartJoin() throws InterruptedException {
         sharedBeforeStart = 10; // ghi trước start()
         Thread t = new Thread(() -> {
             // start() HB mọi lệnh trong thread → chắc chắn thấy 10
@@ -120,7 +94,7 @@ public class JavaMemoryModelDemo {
     }
 
     // ============================================
-    // DEMO 4: REORDERING (litmus test kinh điển - store buffer)
+    // DEMO 3: REORDERING (litmus test kinh điển - store buffer)
     // ============================================
     /**
      *   Thread 1: x = 1; r1 = y;      Thread 2: y = 1; r2 = x;
@@ -196,7 +170,7 @@ public class JavaMemoryModelDemo {
         return weird;
     }
 
-    static void demo4Reordering() throws Exception {
+    static void demo3Reordering() throws Exception {
         final int N = 30_000;
         int plain = runLitmus(new PlainLitmus(), N);
         System.out.println("  Biến thường : r1==0 && r2==0 xuất hiện " + plain + "/" + N + " lần"
@@ -206,7 +180,7 @@ public class JavaMemoryModelDemo {
     }
 
     // ============================================
-    // DEMO 5: SINGLETON - DCL, Holder, Enum
+    // DEMO 4: SINGLETON - DCL, Holder, Enum
     // ============================================
     /**
      * DCL KHÔNG volatile là SAI vì 'instance = new X()' gồm 3 bước:
@@ -248,14 +222,14 @@ public class JavaMemoryModelDemo {
     /** Enum: thread-safe, chống reflection và serialization (Effective Java khuyên dùng). */
     enum EnumSingleton { INSTANCE }
 
-    static void demo5Singleton() {
+    static void demo4Singleton() {
         System.out.println("  DCL    : " + (DclSingleton.getInstance() == DclSingleton.getInstance()));
         System.out.println("  Holder : " + (HolderSingleton.getInstance() == HolderSingleton.getInstance()));
         System.out.println("  Enum   : " + (EnumSingleton.INSTANCE == EnumSingleton.valueOf("INSTANCE")));
     }
 
     // ============================================
-    // DEMO 6: FINAL FIELD - an toàn khi publish
+    // DEMO 5: FINAL FIELD - an toàn khi publish
     // ============================================
     static class FinalHolder {
         private final int a;
@@ -272,7 +246,7 @@ public class JavaMemoryModelDemo {
 
     static FinalHolder racyPublished; // publish KHÔNG đồng bộ (data race)
 
-    static void demo6Final() throws InterruptedException {
+    static void demo5Final() throws InterruptedException {
         Thread reader = new Thread(() -> {
             FinalHolder h;
             while ((h = racyPublished) == null) { Thread.onSpinWait(); }
@@ -291,23 +265,23 @@ public class JavaMemoryModelDemo {
     public static void main(String[] args) throws Exception {
         System.out.println("=== JAVA MEMORY MODEL DEMO ===\n");
 
-        System.out.println("--- Demo 1: Visibility (không có happens-before) ---");
-        demo1Visibility();
+        // Vấn đề VISIBILITY cơ bản (cờ dừng vòng lặp không volatile) đã demo ở VolatileDemo Demo 1-2.
+        // File này đi tiếp: happens-before đảm bảo visibility/ordering cho mọi dữ liệu như thế nào.
 
-        System.out.println("\n--- Demo 2: Safe publication bằng volatile ---");
-        demo2VolatilePublication();
+        System.out.println("--- Demo 1: Safe publication bằng volatile ---");
+        demo1VolatilePublication();
 
-        System.out.println("\n--- Demo 3: Thread.start() / join() ---");
-        demo3StartJoin();
+        System.out.println("\n--- Demo 2: Thread.start() / join() ---");
+        demo2StartJoin();
 
-        System.out.println("\n--- Demo 4: Reordering (có thể mất vài giây) ---");
-        demo4Reordering();
+        System.out.println("\n--- Demo 3: Reordering (có thể mất vài giây) ---");
+        demo3Reordering();
 
-        System.out.println("\n--- Demo 5: Singleton ---");
-        demo5Singleton();
+        System.out.println("\n--- Demo 4: Singleton ---");
+        demo4Singleton();
 
-        System.out.println("\n--- Demo 6: final field ---");
-        demo6Final();
+        System.out.println("\n--- Demo 5: final field ---");
+        demo5Final();
 
         System.out.println("\n=== INTERVIEW TIPS ===");
         System.out.println("Q: Happens-before là gì?");
