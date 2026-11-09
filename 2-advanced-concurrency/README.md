@@ -21,7 +21,7 @@ Spring `@Async` (cấu hình pool, MDC/SecurityContext/transaction, exception) n
 ## Thứ tự học gợi ý
 
 1. `AtomicVariablesDemo` — nối thẳng bài `volatile`, ngắn nhất.
-2. `ExecutorServiceDemo` — phần được hỏi nhiều nhất.
+2. `ExecutorServiceDemo` — phần được hỏi nhiều nhất. Đọc kèm [`01_ExecutorService.md`](01_ExecutorService.md) (10 điểm khó trong production + checklist review code).
 3. `CompletableFutureDemo` — học sau khi chắc pool.
 4. `ConcurrentCollectionsDemo`
 5. `SynchronizersDemo`
