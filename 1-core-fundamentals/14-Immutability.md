@@ -2,6 +2,7 @@
 
 **Source:** `ImmutabilityDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -59,12 +60,16 @@ Thread-safe · cache `hashCode` · an toàn làm key của Map · String pool ·
 
 ### Q1. Why are immutable objects thread-safe?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *Nothing changes after construction, so there is nothing to race on.*
 
 **Suggested Answer:**
 An immutable object **can't change** after it is created. Threads only read it, and reading alone can't cause a race condition. Also, Java's final field rules guarantee that other threads see the **fully initialized** values. So I can share immutable objects freely **without any locks**.
 
 ### Q2. How do you create an immutable class?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *Final class, private final fields, no setters, and defensive copies.*
 
@@ -73,12 +78,16 @@ I make the class `final`, so no subclass can change its behavior. All fields are
 
 ### Q3. Does `final` make an object immutable?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *No — `final` locks the reference, not the object.*
 
 **Suggested Answer:**
 No. `final` means the **reference** can't point to another object. But the object itself can still change. For example, a `final List` can still call `add()`, and a `final Date` can still call `setTime()`. To be truly immutable, the object inside must also be immutable, or I must **copy** it.
 
 ### Q4. Is a record immutable?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *Only shallowly — mutable components can still change.*
 
@@ -87,6 +96,8 @@ A record is **shallow immutable**. Its fields are final, but if a component is a
 
 ### Q5. `unmodifiableList` vs `List.copyOf`?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *`unmodifiableList` is a view; `List.copyOf` is a real copy.*
 
 **Suggested Answer:**
@@ -94,12 +105,16 @@ A record is **shallow immutable**. Its fields are final, but if a component is a
 
 ### Q6. How do you share changing config safely between threads?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *Replace one immutable object through a volatile field.*
 
 **Suggested Answer:**
 If I store `host` and `port` in two separate volatile fields, a reader can see a **new host with an old port**. Instead, I put both in an immutable `Config` object and keep it in **one volatile field**. To update, I create a new `Config` and replace the reference. Readers always see a **consistent snapshot**. This works well for hot-reloading config or feature flags.
 
 ### Q7. What are the downsides of immutability?
+
+**Importance:** 🟢 Low
 
 **Key sentence:** *More objects, and every change needs a copy.*
 

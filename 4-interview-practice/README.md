@@ -27,6 +27,18 @@ java EvenOddPrinter.java
 | `TokenBucketRateLimiter.java` | P1 | Thread-safe rate limiter with bursts | Compound state under one lock, `nanoTime`, rate limit vs concurrency limit, distributed limits |
 | `ThreadSafeLruCache.java` | P2 | O(1) LRU cache, thread-safe | The **ReadWriteLock trap** (`get()` mutates access order) — demonstrated failing |
 
+**Interview English notes** — one file per exercise, same format as `1-core-fundamentals/` (Vietnamese notes → questions with *Key sentence* and a 30–45 s answer → sentences to memorize → vocabulary → self-test). Each question is tagged 🔴 Important · 🟡 Medium · 🟢 Low.
+
+| # | File | Source |
+|---|---|---|
+| 01 | [`01-EvenOddPrinter.md`](01-EvenOddPrinter.md) | `EvenOddPrinter.java` |
+| 02 | [`02-ConcurrencyTesting.md`](02-ConcurrencyTesting.md) | `ConcurrencyTestingDemo.java` |
+| 03 | [`03-BoundedFanOut.md`](03-BoundedFanOut.md) | `BoundedFanOut.java` |
+| 04 | [`04-GracefulBatchProcessor.md`](04-GracefulBatchProcessor.md) | `GracefulBatchProcessor.java` |
+| 05 | [`05-TokenBucketRateLimiter.md`](05-TokenBucketRateLimiter.md) | `TokenBucketRateLimiter.java` |
+| 06 | [`06-ThreadSafeLruCache.md`](06-ThreadSafeLruCache.md) | `ThreadSafeLruCache.java` |
+| 07 | [`07-TechLeadScenarios.md`](07-TechLeadScenarios.md) | `TECH_LEAD_SCENARIOS.md` (short 45–60 s versions) |
+
 Related exercises elsewhere in the repo:
 - Producer–Consumer with `wait/notifyAll`: `1-core-fundamentals/WaitNotifyDemo.java`
 - Producer–Consumer with `BlockingQueue` + poison pill: `2-advanced-concurrency/ConcurrentCollectionsDemo.java`

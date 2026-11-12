@@ -2,6 +2,7 @@
 
 **Source:** `JavaMemoryModelDemo.java` (học sau `VolatileDemo.java`)
 **Goal:** trả lời được mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây** (4–5 câu ngắn).
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -80,12 +81,16 @@ Mỗi câu có **Key sentence** (nhớ câu này trước) và **Suggested Answe
 
 ### Q1. What is the Java Memory Model?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *The JMM defines when one thread can see changes made by another thread.*
 
 **Suggested Answer:**
 The Java Memory Model defines how threads share memory. It solves two problems. The first is **visibility**: one thread changes a value, but another thread may not see it. The second is **ordering**: the compiler and CPU can change the order of instructions. The JMM uses **happens-before rules** to say when a change is guaranteed to be visible.
 
 ### Q2. What is happens-before? Give examples.
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *If A happens-before B, B is guaranteed to see everything A did.*
 
@@ -94,6 +99,8 @@ Happens-before is a rule that guarantees visibility and ordering between two act
 
 ### Q3. What is safe publication?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *Safe publication means other threads see a fully constructed object, not a half-built one.*
 
 **Suggested Answer:**
@@ -101,12 +108,16 @@ Publishing an object means making it available to other threads. If we publish i
 
 ### Q4. Why does double-checked locking need `volatile`?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *Without volatile, another thread can see the object before the constructor finishes.*
 
 **Suggested Answer:**
 Creating an object has three steps: allocate memory, run the constructor, and assign the reference. The JVM can **reorder** the last two steps. So another thread may see a non-null instance and use it before it is fully built. `volatile` **prevents this reordering**. In practice, I prefer the **holder class** or an **enum**, because they are simpler and safer.
 
 ### Q5. Why is letting `this` escape in a constructor dangerous?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *If `this` escapes, other threads can see the object before it is ready — even its final fields.*
 
@@ -124,6 +135,8 @@ class Example {
 ```
 
 ### Q6. What is the difference between a data race and a race condition?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *A data race is a memory problem; a race condition is a logic problem.*
 

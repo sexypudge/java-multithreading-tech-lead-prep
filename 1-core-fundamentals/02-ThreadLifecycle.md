@@ -2,6 +2,7 @@
 
 **Source:** `ThreadLifecycleDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -55,12 +56,16 @@ Thread thoát `wait()` phải lấy lại monitor → đi **WAITING → BLOCKED 
 
 ### Q1. What are the thread states in Java?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *There are six states: NEW, RUNNABLE, BLOCKED, WAITING, TIMED_WAITING, and TERMINATED.*
 
 **Suggested Answer:**
 A new thread is in the `NEW` state. After `start()`, it becomes `RUNNABLE`, which means running or ready to run. It can move to `BLOCKED` when waiting for a monitor lock, or to `WAITING` and `TIMED_WAITING` when waiting for a signal or a timeout. When `run()` finishes, the thread is `TERMINATED`. There is **no RUNNING state** in Java.
 
 ### Q2. What is the difference between BLOCKED and WAITING?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *BLOCKED waits for a monitor lock; WAITING waits for a signal.*
 
@@ -69,6 +74,8 @@ A thread is `BLOCKED` when it wants to enter a `synchronized` block, but another
 
 ### Q3. What state is a thread in after `notify()`?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *It doesn't run immediately — it moves from WAITING to BLOCKED first.*
 
 **Suggested Answer:**
@@ -76,12 +83,16 @@ A thread is `BLOCKED` when it wants to enter a `synchronized` block, but another
 
 ### Q4. What state is a thread in while reading from a socket?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *RUNNABLE — the JVM doesn't separate "running" from "waiting for I/O".*
 
 **Suggested Answer:**
 It is `RUNNABLE`. From the JVM's point of view, the thread is running native code, even if the OS is waiting for data. So when I read a thread dump, a `RUNNABLE` thread is **not always using CPU**.
 
 ### Q5. sleep() vs wait()?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *`wait()` releases the lock; `sleep()` keeps it.*
 

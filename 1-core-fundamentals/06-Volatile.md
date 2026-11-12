@@ -2,6 +2,7 @@
 
 **Source:** `VolatileDemo.java` (học trước `JavaMemoryModelDemo.java`)
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -66,12 +67,16 @@ Tốt nhất: không chia sẻ state    → immutable / thread confinement
 
 ### Q1. What problem does `volatile` solve?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *`volatile` makes a change by one thread visible to other threads.*
 
 **Suggested Answer:**
 Without `volatile`, the JIT can keep a value in a register or move a read out of a loop. So a thread might **never see** a change made by another thread. For example, a worker loop with `while (running)` may never stop. When the field is `volatile`, every read sees the **latest write**, and the compiler can't reorder instructions around it.
 
 ### Q2. Does `volatile` make `count++` thread-safe?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *No — volatile gives visibility, not atomicity.*
 
@@ -80,6 +85,8 @@ No. `count++` is three steps: read, add, and write. `volatile` makes each read a
 
 ### Q3. When should you use `volatile`?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *For simple flags and values that don't depend on the old value.*
 
 **Suggested Answer:**
@@ -87,12 +94,16 @@ I use `volatile` when the new value **doesn't depend on the old value**, like a 
 
 ### Q4. What is the difference between `volatile` and `synchronized`?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *volatile gives visibility; synchronized gives visibility plus mutual exclusion.*
 
 **Suggested Answer:**
 Both guarantee visibility. But `volatile` has **no lock** and no mutual exclusion, so it can't protect compound operations. `synchronized` lets only one thread run the critical section at a time, so it can protect several steps together. I use `volatile` for simple state like a flag, and `synchronized` when several operations must happen **atomically**.
 
 ### Q5. Is `volatile` expensive?
+
+**Importance:** 🟢 Low
 
 **Key sentence:** *Reads are cheap; writes cost a memory barrier.*
 

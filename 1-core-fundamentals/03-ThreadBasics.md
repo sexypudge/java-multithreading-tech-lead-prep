@@ -2,6 +2,7 @@
 
 **Source:** `ThreadBasicsDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -48,12 +49,16 @@
 
 ### Q1. What does `join()` do?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *`join()` makes the current thread wait until another thread finishes.*
 
 **Suggested Answer:**
 When I call `t.join()`, the current thread waits until thread `t` terminates. With `join(timeout)`, it waits at most that long, but it **doesn't throw an error** on timeout, so I must check `isAlive()`. Also, `join()` creates a **happens-before** relationship, so the caller sees all changes made by the finished thread.
 
 ### Q2. What is a daemon thread?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *The JVM doesn't wait for daemon threads when it shuts down.*
 
@@ -62,12 +67,16 @@ A daemon thread is a background thread. The JVM exits when **all non-daemon thre
 
 ### Q3. What happens to an exception thrown in a child thread?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *It doesn't reach the parent thread — use an UncaughtExceptionHandler.*
 
 **Suggested Answer:**
 An exception in a thread **does not go to the thread that started it**, so a `try/catch` in `main` can't catch it. The thread just dies, and by default the JVM prints the stack trace. To handle it, I set an `UncaughtExceptionHandler`. With an executor, `submit()` stores the exception in the `Future`, and I only see it when I call `get()`.
 
 ### Q4. Does `sleep()` release the lock? What about `yield()`?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *Neither releases the lock — only `wait()` does.*
 

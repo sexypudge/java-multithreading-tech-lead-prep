@@ -2,6 +2,7 @@
 
 **Source:** `SynchronizationDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -60,12 +61,16 @@ Thread đang giữ monitor có thể vào lại code `synchronized` trên **cùn
 
 ### Q1. How does `synchronized` work?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *`synchronized` gives mutual exclusion and visibility on the same monitor.*
 
 **Suggested Answer:**
 Every Java object has a monitor lock. Before a thread enters a `synchronized` block, it must **acquire that lock**, and other threads that need the same lock must wait. `synchronized` also guarantees **visibility**: when a thread releases the lock, the next thread that takes it sees all the changes. That's why the getter must be synchronized too.
 
 ### Q2. What does each form of `synchronized` lock on?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *Instance methods lock `this`, static methods lock the Class object, blocks lock the object you choose.*
 
@@ -74,12 +79,16 @@ A synchronized instance method locks `this`. A static synchronized method locks 
 
 ### Q3. Synchronized method vs synchronized block?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *A block lets me choose the lock and keep the critical section small.*
 
 **Suggested Answer:**
 A synchronized method locks the whole method on `this`. A block lets me protect only the part that needs it, and use a **private final lock object** that outside code can't use by mistake. But a block is **not automatically faster**. It only helps if it really reduces the time the lock is held.
 
 ### Q4. Do two threads block each other on different instances? Static vs instance?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *No — different objects have different locks.*
 
@@ -88,6 +97,8 @@ No. Each instance has its own monitor, so threads using different instances run 
 
 ### Q5. What does reentrant mean?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *A thread can acquire a lock it already holds.*
 
 **Suggested Answer:**
@@ -95,12 +106,16 @@ Reentrant means a thread that already holds a lock can **take it again** without
 
 ### Q6. Is `synchronized` slow?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *It's cheap without contention; contention is what makes it slow.*
 
 **Suggested Answer:**
 Without contention, `synchronized` is very cheap because the JVM optimizes it. It becomes slow when **many threads compete** for the same lock: they wait, get parked, and cause context switches. To reduce this, I keep critical sections short, avoid I/O while holding a lock, and use classes like `AtomicInteger` or `ConcurrentHashMap` when they fit.
 
 ### Q7. What are some edge cases of `synchronized`?
+
+**Importance:** 🟢 Low
 
 **Key sentence:** *Never lock on null, a String literal, or a field that can change.*
 

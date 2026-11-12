@@ -16,7 +16,10 @@ Every demo **terminates on its own and prints ✓ / ✗**, so you can see each b
 4-interview-practice/    Coding exercises with self-checking solutions + Tech Lead scenario answers
 INTERVIEW_QUESTIONS.md   68 questions with interview-ready answers + 5-minute cheat sheet
 Priority.md              P0–P3 checklist and a 2-week study plan
+STUDY_PLAN.md            3-week fast-track plan (Vietnamese): day-by-day files + 🔴 questions, checkpoints, mocks
 ```
+
+> **Ôn nhanh:** theo [`STUDY_PLAN.md`](STUDY_PLAN.md) — mỗi ngày đã ghi rõ file và câu 🔴 cần học.
 
 ## 🚀 Running
 

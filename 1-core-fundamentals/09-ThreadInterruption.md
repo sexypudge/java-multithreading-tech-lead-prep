@@ -2,6 +2,7 @@
 
 **Source:** `ThreadInterruptionDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -49,12 +50,16 @@ Bắt `InterruptedException` thì **một trong hai**:
 
 ### Q1. How do you stop a thread correctly?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *I call `interrupt()`, and the thread checks the flag and stops itself.*
 
 **Suggested Answer:**
 Java has no safe way to kill a thread. `Thread.stop()` is deprecated because it releases locks suddenly and can leave objects **broken**. Instead, I call `interrupt()`, which only **sets a flag**. The thread checks the flag in its loop, or gets an `InterruptedException` if it's sleeping or waiting, and then it cleans up and exits. It's a **cooperative** mechanism.
 
 ### Q2. Does `interrupt()` stop a thread immediately?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *No — it only sets a flag.*
 
@@ -63,12 +68,16 @@ No. `interrupt()` just sets the interrupted flag. If the thread is in a blocking
 
 ### Q3. What should you do when you catch `InterruptedException`?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *Rethrow it, or restore the flag — never swallow it.*
 
 **Suggested Answer:**
 When `InterruptedException` is thrown, the flag is **cleared**. So I have two options: declare `throws InterruptedException` and let the caller handle it, or call `Thread.currentThread().interrupt()` to **restore the flag** and then exit. An empty catch block is a bug, because the stop request is lost and the thread may run forever.
 
 ### Q4. `isInterrupted()` vs `Thread.interrupted()`?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *`isInterrupted()` only reads the flag; `interrupted()` reads and clears it.*
 
@@ -77,12 +86,16 @@ When `InterruptedException` is thrown, the flag is **cleared**. So I have two op
 
 ### Q5. Can you interrupt a thread waiting for a lock?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *Not with synchronized — but yes with `lockInterruptibly()`.*
 
 **Suggested Answer:**
 A thread waiting to enter a `synchronized` block is `BLOCKED`, and it **can't be interrupted**. It keeps waiting until it gets the lock. With `ReentrantLock`, I can use `lockInterruptibly()`, so the thread stops waiting and gets an `InterruptedException`. This is one reason to choose `ReentrantLock`.
 
 ### Q6. `shutdown()` vs `shutdownNow()`?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *`shutdown()` finishes current tasks; `shutdownNow()` interrupts them.*
 

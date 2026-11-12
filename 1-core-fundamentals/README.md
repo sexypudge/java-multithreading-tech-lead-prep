@@ -51,7 +51,7 @@ Học theo mạch: *tạo thread → thấy vấn đề → giải pháp → v�
 | `ThreadLocalDemo` | `SimpleDateFormat`, request context, rò rỉ trong pool, `InheritableThreadLocal` | ThreadLocal gây leak thế nào? |
 | `ImmutabilityDemo` | Immutable class, `record`, defensive copy, view vs copy, snapshot + volatile | `final` có làm object immutable không? |
 
-**Ghi chú ôn tập (Interview English)** — mỗi class một file, cùng format: kiến thức (tiếng Việt) → câu hỏi + *Key sentence* + câu trả lời 30–45 giây → 5 câu cần nhớ → từ vựng → self-test.
+**Ghi chú ôn tập (Interview English)** — mỗi class một file, cùng format: kiến thức (tiếng Việt) → câu hỏi + *Key sentence* + câu trả lời 30–45 giây → 5 câu cần nhớ → từ vựng → self-test. Mỗi câu hỏi có **mức độ quan trọng**: 🔴 Important (chắc chắn bị hỏi) · 🟡 Medium (hay gặp) · 🟢 Low (biết để không bị bất ngờ).
 
 | # | File | Class |
 |---|---|---|

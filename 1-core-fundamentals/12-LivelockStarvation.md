@@ -2,6 +2,7 @@
 
 **Source:** `LivelockStarvationDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -43,12 +44,16 @@ Demo 2: 4 thread tranh 1 lock — unfair thường lệch nhiều, fair thườn
 
 ### Q1. Deadlock vs livelock vs starvation?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *Deadlock: stuck. Livelock: busy but no progress. Starvation: one thread never gets a turn.*
 
 **Suggested Answer:**
 In a **deadlock**, threads are blocked waiting for each other, so nothing moves. In a **livelock**, threads are still running and reacting to each other, but they make **no progress**, like two people stepping aside for each other in a hallway. In **starvation**, the system makes progress, but **one thread never gets** the resource because others keep taking it.
 
 ### Q2. When does livelock happen? Give an example.
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *When threads keep retrying in the same rhythm and keep colliding.*
 
@@ -57,6 +62,8 @@ Livelock happens when threads keep **responding to each other** — yielding, re
 
 ### Q3. How do you fix livelock?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *Add random backoff to break the symmetry.*
 
 **Suggested Answer:**
@@ -64,12 +71,16 @@ The main fix is **random backoff**, or exponential backoff with jitter. Each thr
 
 ### Q4. How do you detect livelock in production?
 
+**Importance:** 🟢 Low
+
 **Key sentence:** *High CPU, almost zero throughput, and repeating logs.*
 
 **Suggested Answer:**
 Livelock is hard to detect because threads look healthy: they are `RUNNABLE` and use CPU. `jstack` **won't report** a deadlock. The signs are **high CPU but almost no throughput**, and logs that repeat the same pattern. If I take several thread dumps in a row and see the same threads in the same retry code, it's probably livelock.
 
 ### Q5. What causes starvation and how do you fix it?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *Unfair locks, long critical sections, or busy pools — fix with fairness and shorter locks.*
 

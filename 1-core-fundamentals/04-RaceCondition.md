@@ -2,6 +2,7 @@
 
 **Source:** `RaceConditionDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -53,12 +54,16 @@ Stress test nhiều thread + start gate, chạy lặp nhiều lần · code revi
 
 ### Q1. What is a race condition?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *A race condition happens when the result depends on the timing of threads.*
 
 **Suggested Answer:**
 A race condition happens when several threads use shared data, at least one of them writes, and there is **no proper synchronization**. The result then depends on the order in which the threads run. So the program may work most of the time, but **sometimes give wrong results**.
 
 ### Q2. Why is `count++` not thread-safe?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *`count++` is three steps — read, add, write — not one.*
 
@@ -67,12 +72,16 @@ A race condition happens when several threads use shared data, at least one of t
 
 ### Q3. What are the two common patterns of race conditions?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *Read-modify-write and check-then-act.*
 
 **Suggested Answer:**
 The first is **read-modify-write**, like `count++`, where two threads overwrite each other's updates. The second is **check-then-act**, like lazy initialization: two threads both see `instance == null` and both create an object. In both cases, the steps must be done **atomically**, as one unit.
 
 ### Q4. How do you fix the bank withdrawal race?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *The check and the update must be inside the same lock.*
 
@@ -81,12 +90,16 @@ The problem is that checking the balance and withdrawing are two separate steps.
 
 ### Q5. Race condition vs data race?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *A data race is a memory problem; a race condition is a logic problem.*
 
 **Suggested Answer:**
 A data race means two threads access the same variable, at least one writes, and there is **no synchronization**. A race condition means the result is wrong because of **timing**. You can have a race condition without a data race. For example, calling `get()` then `put()` on a `ConcurrentHashMap` is safe for memory, but the logic is still wrong. I'd use `computeIfAbsent` instead.
 
 ### Q6. How do you prevent and detect race conditions?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *Avoid shared mutable state first; lock only when needed.*
 

@@ -16,12 +16,26 @@ Nối tiếp phần nền tảng (thread lifecycle, race condition, `synchronize
 | **P0** | `ThreadDiagnosisDemo` | CPU cao, pool starvation, lock contention, deadlock - đọc "thread dump" bằng `ThreadMXBean` |
 | P1 | `ForkJoinDemo` | Work stealing, threshold, parallel stream khi nào có lợi/hại, bẫy blocking trong commonPool |
 
+**Ghi chú ôn tập (Interview English)** — mỗi class một file, cùng format với `1-core-fundamentals/`: kiến thức (tiếng Việt) → câu hỏi + *Key sentence* + câu trả lời 30–45 giây → 5 câu cần nhớ → từ vựng → self-test. Mỗi câu hỏi có thêm **mức độ quan trọng**: 🔴 Important (chắc chắn bị hỏi) · 🟡 Medium (hay gặp) · 🟢 Low (biết để không bị bất ngờ).
+
+| # | File | Class |
+|---|---|---|
+| 01 | [`01-AtomicVariables.md`](01-AtomicVariables.md) | `AtomicVariablesDemo` |
+| 02 | [`02-ExecutorService.md`](02-ExecutorService.md) | `ExecutorServiceDemo` |
+| 02b | [`02b-ExecutorService-Production.md`](02b-ExecutorService-Production.md) | Deep-dive production (không theo format Q&A) |
+| 03 | [`03-CompletableFuture.md`](03-CompletableFuture.md) | `CompletableFutureDemo` |
+| 04 | [`04-ConcurrentCollections.md`](04-ConcurrentCollections.md) | `ConcurrentCollectionsDemo` |
+| 05 | [`05-Synchronizers.md`](05-Synchronizers.md) | `SynchronizersDemo` |
+| 06 | [`06-VirtualThreads.md`](06-VirtualThreads.md) | `VirtualThreadsDemo` |
+| 07 | [`07-ThreadDiagnosis.md`](07-ThreadDiagnosis.md) | `ThreadDiagnosisDemo` |
+| 08 | [`08-ForkJoin.md`](08-ForkJoin.md) | `ForkJoinDemo` |
+
 Spring `@Async` (cấu hình pool, MDC/SecurityContext/transaction, exception) nằm ở `3-spring-boot-app/` (`NOTES.md` + code chạy được).
 
 ## Thứ tự học gợi ý
 
 1. `AtomicVariablesDemo` — nối thẳng bài `volatile`, ngắn nhất.
-2. `ExecutorServiceDemo` — phần được hỏi nhiều nhất. Đọc kèm [`01_ExecutorService.md`](01_ExecutorService.md) (10 điểm khó trong production + checklist review code).
+2. `ExecutorServiceDemo` — phần được hỏi nhiều nhất. Đọc kèm [`02b-ExecutorService-Production.md`](02b-ExecutorService-Production.md) (10 điểm khó trong production + checklist review code).
 3. `CompletableFutureDemo` — học sau khi chắc pool.
 4. `ConcurrentCollectionsDemo`
 5. `SynchronizersDemo`

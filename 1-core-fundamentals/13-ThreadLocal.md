@@ -2,6 +2,7 @@
 
 **Source:** `ThreadLocalDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -55,12 +56,16 @@ Dùng như "biến global ẩn" → khó test, khó theo dõi luồng dữ liệ
 
 ### Q1. What is ThreadLocal and when do you use it?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *ThreadLocal gives each thread its own copy of a value, so no locking is needed.*
 
 **Suggested Answer:**
 `ThreadLocal` gives **each thread its own copy** of a variable, so threads don't share it and don't need locks. I use it for two things: objects that are **not thread-safe** and expensive to create, like `SimpleDateFormat`, and **request context**, like the user ID or trace ID. Spring uses it for `SecurityContext` and transactions.
 
 ### Q2. Where is the ThreadLocal value stored?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *In a map inside each Thread object, not in a global map.*
 
@@ -69,6 +74,8 @@ Each `Thread` object has a field called `ThreadLocalMap`. The key is the `Thread
 
 ### Q3. How can ThreadLocal cause a memory leak?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *In a thread pool, threads never die, so values stay forever unless you call `remove()`.*
 
 **Suggested Answer:**
@@ -76,12 +83,16 @@ In a thread pool, threads live for a long time and are **reused**. The key is we
 
 ### Q4. Does ThreadLocal work with `@Async` or a thread pool?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *No — the value doesn't move to another thread automatically.*
 
 **Suggested Answer:**
 No. `ThreadLocal` values like `SecurityContext` or the MDC trace ID **stay on the original thread**. When work moves to another thread, the value is missing. `InheritableThreadLocal` doesn't help with pools, because it copies only when a thread is created. I use a Spring `TaskDecorator` or wrap the task to **copy the context** manually.
 
 ### Q5. Is ThreadLocal a good fit for virtual threads?
+
+**Importance:** 🟢 Low
 
 **Key sentence:** *It works, but it can use a lot of memory — ScopedValue is better.*
 

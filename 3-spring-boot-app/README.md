@@ -7,6 +7,16 @@ timeout + fallback, back-pressure bằng `CallerRunsPolicy`, `@Scheduled`, metri
 - **Lý thuyết + checklist review code:** [`NOTES.md`](NOTES.md)
 - **Bằng chứng chạy được:** `src/test/java/.../AsyncBehaviorTest.java` (`mvn test`)
 
+**Ghi chú ôn tập (Interview English)** — mỗi class một file, cùng format với `1-core-fundamentals/`; mỗi câu hỏi có mức độ quan trọng 🔴 Important · 🟡 Medium · 🟢 Low.
+
+| # | File | Class |
+|---|---|---|
+| 01 | [`01-AsyncConfig.md`](01-AsyncConfig.md) | `AsyncConfig` |
+| 02 | [`02-AsyncService.md`](02-AsyncService.md) | `AsyncService` (+ `AsyncBehaviorTest`) |
+| 03 | [`03-AsyncController.md`](03-AsyncController.md) | `AsyncController` |
+| 04 | [`04-RequestIdFilter.md`](04-RequestIdFilter.md) | `RequestIdFilter` |
+| 05 | [`05-ScheduledTasks.md`](05-ScheduledTasks.md) | `ScheduledTasks` |
+
 ## Yêu cầu & chạy
 
 JDK 21, Maven 3.9+, Spring Boot 3.5.

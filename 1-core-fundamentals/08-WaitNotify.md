@@ -2,6 +2,7 @@
 
 **Source:** `WaitNotifyDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -58,12 +59,16 @@ Producer chạy trước: notify không đánh thức ai, tín hiệu **không �
 
 ### Q1. Why must `wait()` be called inside `synchronized`?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *To make "check the condition" and "start waiting" one atomic step — otherwise we lose the signal.*
 
 **Suggested Answer:**
 If we check the condition and then call `wait()` without a lock, another thread can change the condition and call `notify()` **in between**. The notification is not saved, so our thread waits **forever**. This is called a **lost wakeup**. Holding the lock makes the check and the wait one atomic step. The JVM enforces it with `IllegalMonitorStateException`.
 
 ### Q2. Why use `while` instead of `if` around `wait()`?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *After waking up, the condition may no longer be true.*
 
@@ -72,12 +77,16 @@ There are two reasons. First, another thread may **take the item** before our th
 
 ### Q3. `notify()` vs `notifyAll()`?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *`notify()` wakes one random thread; `notifyAll()` wakes all of them.*
 
 **Suggested Answer:**
 `notify()` wakes **one** waiting thread, and we can't choose which. `notifyAll()` wakes **all** of them, and they compete for the lock. `notify()` is only safe when all threads wait for the same condition. If producers and consumers wait on the same monitor, `notify()` can wake the wrong thread and the program can **hang**. So I prefer `notifyAll()`, or a `Lock` with two `Condition`s.
 
 ### Q4. `wait()` vs `sleep()`?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *`wait()` releases the lock and waits for a signal; `sleep()` keeps the lock and waits for time.*
 
@@ -86,12 +95,16 @@ There are two reasons. First, another thread may **take the item** before our th
 
 ### Q5. Does a thread run immediately after `notify()`?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *No — it must get the lock back first.*
 
 **Suggested Answer:**
 No. `notify()` **doesn't release the lock**. The woken thread moves to `BLOCKED` and waits until the notifying thread leaves the synchronized block. Then it gets the lock back, rechecks the condition, and continues.
 
 ### Q6. Would you use wait/notify in production?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *Rarely — I use BlockingQueue or other high-level tools.*
 

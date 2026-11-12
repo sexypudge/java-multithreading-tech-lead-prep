@@ -2,6 +2,7 @@
 
 **Source:** `ThreadCreationExamples.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -41,12 +42,16 @@
 
 ### Q1. What are the ways to create a thread in Java?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *I define a task with Runnable or Callable and run it with an ExecutorService.*
 
 **Suggested Answer:**
 There are three common ways: extend `Thread`, implement `Runnable`, or implement `Callable`. Extending `Thread` mixes the task with the thread, so I rarely use it. In practice, I write the task as a `Runnable` or `Callable` and submit it to an `ExecutorService`. This **separates the task from thread management**.
 
 ### Q2. Runnable vs Callable?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *Callable returns a result and can throw checked exceptions; Runnable cannot.*
 
@@ -55,12 +60,16 @@ There are three common ways: extend `Thread`, implement `Runnable`, or implement
 
 ### Q3. What is the difference between `start()` and `run()`?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *`start()` creates a new thread; `run()` is just a normal method call.*
 
 **Suggested Answer:**
 `start()` asks the JVM to create a **new thread** and then call `run()` on that thread. If I call `run()` directly, it runs on the **current thread**, like a normal method. Also, a thread can only be started once. Calling `start()` twice throws `IllegalThreadStateException`.
 
 ### Q4. Why shouldn't we create threads manually in production?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *Threads are expensive, so we reuse them with a thread pool.*
 

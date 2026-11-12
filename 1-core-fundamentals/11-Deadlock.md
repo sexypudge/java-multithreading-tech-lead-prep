@@ -2,6 +2,7 @@
 
 **Source:** `DeadlockDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -50,12 +51,16 @@ T1: lock(A) → chờ B        T2: lock(B) → chờ A      → vòng chờ
 
 ### Q1. What is a deadlock?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *Two or more threads wait for each other's locks, so none of them can continue.*
 
 **Suggested Answer:**
 A deadlock happens when two or more threads are **waiting for each other's locks**. For example, thread 1 holds lock A and waits for lock B, while thread 2 holds lock B and waits for lock A. Neither can continue. The JVM **doesn't fix this** automatically, so the threads are stuck until we restart the service.
 
 ### Q2. What are the four conditions for a deadlock?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *Mutual exclusion, hold and wait, no preemption, and circular wait.*
 
@@ -64,12 +69,16 @@ These are the **Coffman conditions**. Mutual exclusion: only one thread can hold
 
 ### Q3. How do you detect a deadlock in production?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *I take a thread dump with jstack or jcmd and look for a circular wait.*
 
 **Suggested Answer:**
 I take a thread dump with `jstack` or `jcmd Thread.print`. If there's a deadlock, the dump says **"Found one Java-level deadlock"** and shows which thread holds which lock. I can also call `ThreadMXBean.findDeadlockedThreads()` to send an alert automatically. Note that two `BLOCKED` threads **don't always mean** deadlock — I need to check lock ownership.
 
 ### Q4. How do you prevent deadlocks?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *I enforce a consistent lock ordering.*
 
@@ -78,12 +87,16 @@ The simplest way is **lock ordering**: all threads take locks in the same order,
 
 ### Q5. How is a database deadlock different?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *The database detects it and rolls back one transaction; the JVM doesn't.*
 
 **Suggested Answer:**
 A database **detects** deadlocks itself and rolls back one transaction, called the victim. So the application must **retry** that transaction. The JVM doesn't do this. Java threads stay stuck until we restart. Restarting is only a quick fix — the real fix is lock ordering or `tryLock`.
 
 ### Q6. Can a deadlock happen without locks?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *Yes — thread-pool starvation deadlock.*
 

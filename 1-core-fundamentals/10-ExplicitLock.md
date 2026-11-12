@@ -2,6 +2,7 @@
 
 **Source:** `ExplicitLockDemo.java`
 **Goal:** trả lời mỗi câu bằng tiếng Anh đơn giản trong **30–45 giây**.
+**Mức độ quan trọng:** 🔴 Important = chắc chắn bị hỏi, phải trả lời trôi chảy · 🟡 Medium = hay gặp, cần nắm ý chính · 🟢 Low = biết để không bị bất ngờ.
 
 ---
 
@@ -63,12 +64,16 @@ Code blocking trong `synchronized` có thể **pin** virtual thread vào carrier
 
 ### Q1. When would you use ReentrantLock instead of synchronized?
 
+**Importance:** 🔴 Important
+
 **Key sentence:** *When I need tryLock, timeouts, interruptible locking, fairness, or several conditions.*
 
 **Suggested Answer:**
 I use `ReentrantLock` when I need features that `synchronized` doesn't have: `tryLock` with a timeout, `lockInterruptibly`, a **fair** lock, or **several `Condition`s**. Otherwise, I prefer `synchronized`, because it's simpler and **can't forget to unlock**.
 
 ### Q2. Why must `unlock()` be in a `finally` block?
+
+**Importance:** 🔴 Important
 
 **Key sentence:** *Otherwise an exception leaves the lock held forever.*
 
@@ -77,12 +82,16 @@ Unlike `synchronized`, a `Lock` is not released automatically. If the code betwe
 
 ### Q3. Fair vs unfair lock?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *Fair locks prevent starvation; unfair locks give better throughput.*
 
 **Suggested Answer:**
 A fair lock gives the lock to the thread that has **waited the longest**, so no thread starves. An unfair lock, which is the default, lets a new thread **jump the queue** if the lock is free. Unfair is faster, but some threads may wait a long time. I use fair only when starvation is a real problem.
 
 ### Q4. How is `Condition` different from wait/notify?
+
+**Importance:** 🟡 Medium
 
 **Key sentence:** *One lock can have several conditions, so I can wake the right group of threads.*
 
@@ -91,12 +100,16 @@ With wait/notify, there is only **one wait set** per object, so I often need `no
 
 ### Q5. When would you use ReadWriteLock?
 
+**Importance:** 🟡 Medium
+
 **Key sentence:** *When reads are frequent, writes are rare, and reads take some time.*
 
 **Suggested Answer:**
 `ReadWriteLock` lets **many readers** hold the lock at the same time, while a writer gets **exclusive** access. It's useful for a cache with many reads and few writes. The downsides: writers can starve, it's slower than `synchronized` for very short sections, and you **can't upgrade** a read lock to a write lock — that causes a deadlock.
 
 ### Q6. What is special about StampedLock?
+
+**Importance:** 🟢 Low
 
 **Key sentence:** *It supports optimistic reads without locking.*
 
